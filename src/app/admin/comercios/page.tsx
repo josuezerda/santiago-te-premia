@@ -19,6 +19,7 @@ const categories = ['Todos', 'Gastronomía', 'Perfumería', 'Artesanías', 'Salu
 export default function ComerciosPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [comerciosData, setComerciosData] = useState<Comercio[]>([]);
   const [loading, setLoading] = useState(true);
