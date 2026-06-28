@@ -33,6 +33,8 @@ export default function ComerciosPage() {
     phone: '',
     user_email: '',
     user_password: '',
+    validator_phone: '',
+    validator_name: '',
   });
 
   async function fetchBusinesses() {
@@ -95,10 +97,21 @@ export default function ComerciosPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        // Si se puso un número de validador, crearlo
+        if (formData.validator_phone && data.data?.id) {
+          await fetch(`/api/businesses/${data.data.id}/validators`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: formData.validator_phone,
+              name: formData.validator_name || formData.name,
+            }),
+          });
+        }
+
         alert(`✅ ${data.message}`);
         setShowModal(false);
-        setFormData({ name: '', category_id: '', benefit_percentage: '', address: '', phone: '', user_email: '', user_password: '' });
-        // Recargar la lista
+        setFormData({ name: '', category_id: '', benefit_percentage: '', address: '', phone: '', user_email: '', user_password: '', validator_phone: '', validator_name: '' });
         fetchBusinesses();
       } else {
         setFormError(data.error || 'Error al crear el comercio');
@@ -353,6 +366,32 @@ export default function ComerciosPage() {
                 <div className="form-group">
                   <label className="form-label">Contraseña *</label>
                   <input className="form-input" type="text" placeholder="Contraseña inicial" value={formData.user_password} onChange={(e) => setFormData({...formData, user_password: e.target.value})} required />
+                </div>
+              </div>
+
+              {/* Separador: Validadores WhatsApp */}
+              <div style={{
+                borderTop: '1px solid var(--border-color)',
+                marginTop: '24px',
+                paddingTop: '20px',
+                marginBottom: '16px',
+              }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '4px' }}>
+                  📱 Validador por WhatsApp
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '16px' }}>
+                  Número de WhatsApp autorizado a validar PINs de turistas desde el asistente. Podés agregar más validadores después.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">Nº WhatsApp del validador</label>
+                  <input className="form-input" placeholder="5493854000000" value={formData.validator_phone} onChange={(e) => setFormData({...formData, validator_phone: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nombre del validador</label>
+                  <input className="form-input" placeholder="Ej: Juan (cajero)" value={formData.validator_name} onChange={(e) => setFormData({...formData, validator_name: e.target.value})} />
                 </div>
               </div>
 

@@ -1,427 +1,565 @@
 // ============================================================
-// GET /api/whatsapp/webhook - Verificación del webhook de Meta
-// POST /api/whatsapp/webhook - Recibir mensajes entrantes de WhatsApp
-// Lee token/IDs de la base de datos (system_settings) para que
-// el usuario pueda configurarlo desde el panel sin tocar código.
+// WhatsApp Webhook - Santiago te Premia
+// Flujo conversacional completo con registro multi-paso,
+// menú interactivo con botones, y validación de comercios.
+// Lee config de la tabla system_settings en Supabase.
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { generatePinSecret, getCurrentPin, getTimeRemaining } from '@/lib/pin';
+import { generatePinSecret, getCurrentPin, getTimeRemaining, validatePin } from '@/lib/pin';
 
 // ============================================================
-// Helper: obtener la config de WhatsApp desde la DB
+// Config: leer de DB
 // ============================================================
-async function getWhatsAppConfig() {
+async function getConfig() {
   const { data } = await supabaseAdmin
     .from('system_settings')
-    .select('whatsapp_api_token, whatsapp_verify_token, whatsapp_phone_number_id, whatsapp_business_account_id, pin_expiration_seconds, welcome_message')
+    .select('whatsapp_api_token, whatsapp_verify_token, whatsapp_phone_number_id, pin_expiration_seconds, welcome_message')
     .limit(1)
     .single();
-
   return {
     token: data?.whatsapp_api_token || process.env.WHATSAPP_API_TOKEN || '',
     verifyToken: data?.whatsapp_verify_token || process.env.WHATSAPP_VERIFY_TOKEN || 'santiago-te-premia-token',
-    phoneNumberId: data?.whatsapp_phone_number_id || process.env.WHATSAPP_PHONE_NUMBER_ID || '',
-    pinExpiration: data?.pin_expiration_seconds || 20,
-    welcomeMessage: data?.welcome_message || '',
+    phoneId: data?.whatsapp_phone_number_id || process.env.WHATSAPP_PHONE_NUMBER_ID || '',
+    pinExp: data?.pin_expiration_seconds || 20,
   };
 }
 
 // ============================================================
-// Funciones auxiliares para enviar mensajes de WhatsApp
+// Enviar mensaje de texto
 // ============================================================
-
-async function sendWhatsAppMessage(to: string, text: string, token: string, phoneNumberId: string): Promise<void> {
-  if (!token || !phoneNumberId) {
-    console.warn('[WhatsApp] Token o Phone Number ID no configurados. Mensaje no enviado.');
-    return;
-  }
-
-  const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'text',
-        text: { body: text },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('[WhatsApp] Error al enviar mensaje:', errorData);
-    } else {
-      console.log(`[WhatsApp] Mensaje enviado a ${to}`);
-    }
-  } catch (error) {
-    console.error('[WhatsApp] Error de red al enviar mensaje:', error);
-  }
-}
-
-async function sendWhatsAppInteractiveButtons(
-  to: string,
-  header: string,
-  body: string,
-  buttons: Array<{ id: string; title: string }>,
-  token: string,
-  phoneNumberId: string
-): Promise<void> {
-  if (!token || !phoneNumberId) return;
-
-  const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'interactive',
-        interactive: {
-          type: 'button',
-          header: { type: 'text', text: header },
-          body: { text: body },
-          action: {
-            buttons: buttons.map((btn) => ({
-              type: 'reply',
-              reply: { id: btn.id, title: btn.title },
-            })),
-          },
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('[WhatsApp] Error al enviar botones:', errorData);
-    }
-  } catch (error) {
-    console.error('[WhatsApp] Error de red:', error);
-  }
+async function sendText(to: string, text: string, token: string, phoneId: string) {
+  if (!token || !phoneId) return;
+  await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: text } }),
+  }).catch(e => console.error('[WA] Send error:', e));
 }
 
 // ============================================================
-// GET - Verificación del webhook (requerido por Meta)
+// Enviar botones interactivos
 // ============================================================
+async function sendButtons(to: string, header: string, body: string, buttons: { id: string; title: string }[], token: string, phoneId: string) {
+  if (!token || !phoneId) return;
+  await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp', to, type: 'interactive',
+      interactive: {
+        type: 'button',
+        header: { type: 'text', text: header },
+        body: { text: body },
+        action: { buttons: buttons.map(b => ({ type: 'reply', reply: { id: b.id, title: b.title } })) },
+      },
+    }),
+  }).catch(e => console.error('[WA] Buttons error:', e));
+}
 
+// ============================================================
+// Estado de conversación
+// ============================================================
+async function getState(phone: string) {
+  const { data } = await supabaseAdmin
+    .from('conversation_states')
+    .select('state, data')
+    .eq('phone', phone)
+    .single();
+  return data || { state: 'IDLE', data: {} };
+}
+
+async function setState(phone: string, state: string, stateData: any = {}) {
+  await supabaseAdmin
+    .from('conversation_states')
+    .upsert({ phone, state, data: stateData, updated_at: new Date().toISOString() }, { onConflict: 'phone' });
+}
+
+// ============================================================
+// Verificar si es un validador de comercio
+// ============================================================
+async function getValidatorBusiness(phone: string) {
+  const { data } = await supabaseAdmin
+    .from('business_validators')
+    .select('business_id, name, businesses ( id, name )')
+    .eq('phone', phone)
+    .eq('is_active', true);
+  return data && data.length > 0 ? data[0] : null;
+}
+
+// ============================================================
+// Menú principal del turista
+// ============================================================
+async function sendTouristMenu(to: string, name: string, token: string, phoneId: string) {
+  await sendButtons(to, '🏆 Santiago te Premia',
+    `¡Hola${name ? ', ' + name : ''}! ¿Qué querés hacer?`,
+    [
+      { id: 'mi_pin', title: '🔑 Mi PIN' },
+      { id: 'beneficios', title: '🎁 Beneficios' },
+      { id: 'comercios', title: '🏪 Comercios' },
+    ], token, phoneId);
+  await sendText(to, 'También podés escribir:\n• *AYUDA* - Para obtener información del programa', token, phoneId);
+}
+
+// ============================================================
+// Menú del validador (comercio)
+// ============================================================
+async function sendValidatorMenu(to: string, businessName: string, token: string, phoneId: string) {
+  await sendButtons(to, `🏪 ${businessName}`,
+    'Elegí una opción:',
+    [
+      { id: 'validar_pin', title: '✅ Validar Beneficio' },
+      { id: 'mis_canjes', title: '📋 Mis Canjes Hoy' },
+      { id: 'menu_turista', title: '🔑 Mi PIN (turista)' },
+    ], token, phoneId);
+}
+
+// ============================================================
+// GET - Verificación del webhook
+// ============================================================
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const mode = searchParams.get('hub.mode');
-    const token = searchParams.get('hub.verify_token');
-    const challenge = searchParams.get('hub.challenge');
-
-    const config = await getWhatsAppConfig();
-
-    if (mode === 'subscribe' && token === config.verifyToken) {
-      console.log('[WhatsApp] Webhook verificado exitosamente');
-      return new NextResponse(challenge, { status: 200 });
-    }
-
-    console.warn('[WhatsApp] Verificación fallida - Token inválido');
-    return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 403 });
-  } catch (error) {
-    console.error('[WhatsApp] Error en verificación:', error);
-    return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
+  const { searchParams } = new URL(request.url);
+  const mode = searchParams.get('hub.mode');
+  const token = searchParams.get('hub.verify_token');
+  const challenge = searchParams.get('hub.challenge');
+  const config = await getConfig();
+  if (mode === 'subscribe' && token === config.verifyToken) {
+    return new NextResponse(challenge, { status: 200 });
   }
+  return NextResponse.json({ success: false }, { status: 403 });
 }
 
 // ============================================================
-// POST - Recibir y procesar mensajes entrantes
+// POST - Procesar mensajes
 // ============================================================
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const entry = body?.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
-
-    // Notificaciones de estado (leído, entregado) → ignorar
+    const value = body?.entry?.[0]?.changes?.[0]?.value;
     if (!value?.messages || value.messages.length === 0) {
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    const config = await getWhatsAppConfig();
-    const message = value.messages[0];
-    const from = message.from;
-    const messageType = message.type;
+    const config = await getConfig();
+    const msg = value.messages[0];
+    const from = msg.from;
+    let text = '';
+    if (msg.type === 'text') text = msg.text?.body || '';
+    else if (msg.type === 'interactive') text = msg.interactive?.button_reply?.id || msg.interactive?.list_reply?.id || '';
+    const lower = text.toLowerCase().trim();
 
-    let messageText = '';
-    if (messageType === 'text') {
-      messageText = message.text?.body || '';
-    } else if (messageType === 'interactive') {
-      messageText = message.interactive?.button_reply?.id || '';
-    }
-
-    const messageTextLower = messageText.toLowerCase().trim();
-    console.log(`[WhatsApp] Mensaje de ${from}: "${messageText}"`);
+    console.log(`[WA] ${from}: "${text}"`);
 
     // ============================================================
-    // 1. REGISTRO desde QR (mensaje comienza con REGISTRO_)
+    // REGISTRO DESDE QR
     // ============================================================
-    if (messageText.startsWith('REGISTRO_')) {
-      const qrIdentifier = messageText.replace('REGISTRO_', '');
-
-      // Buscar el punto de interés
+    if (text.startsWith('REGISTRO_')) {
+      const qrId = text.replace('REGISTRO_', '');
       const { data: poi } = await supabaseAdmin
-        .from('points_of_interest')
-        .select('id, name')
-        .eq('qr_identifier', qrIdentifier)
-        .single();
+        .from('points_of_interest').select('id, name').eq('qr_identifier', qrId).single();
 
-      // Verificar si el turista ya está registrado
-      const { data: existingTourist } = await supabaseAdmin
-        .from('tourists')
-        .select('id, name, pin_secret')
-        .eq('phone', from)
-        .single();
+      // ¿Ya registrado?
+      const { data: existing } = await supabaseAdmin
+        .from('tourists').select('id, name, pin_secret').eq('phone', from).single();
 
-      if (existingTourist) {
-        // Ya registrado → enviar bienvenida + PIN
-        const pin = getCurrentPin(existingTourist.pin_secret, config.pinExpiration);
-        const timeRemaining = getTimeRemaining(config.pinExpiration);
-
-        await sendWhatsAppMessage(
-          from,
-          `👋 *¡Hola de nuevo, ${existingTourist.name}!*\n\n` +
-          `Ya estás registrado en Santiago te Premia.\n\n` +
-          `Tu PIN actual es: *${pin}*\n` +
-          `⏱ Se renueva en ${timeRemaining} segundos\n\n` +
-          `Escribí *MENU* para ver las opciones.`,
-          config.token,
-          config.phoneNumberId
-        );
-      } else {
-        // Nuevo turista → registrar
-        const pinSecret = generatePinSecret();
-        const pin = getCurrentPin(pinSecret, config.pinExpiration);
-        const timeRemaining = getTimeRemaining(config.pinExpiration);
-
-        await supabaseAdmin
-          .from('tourists')
-          .insert({
-            phone: from,
-            name: 'Turista',
-            last_name: '',
-            pin_secret: pinSecret,
-            poi_id: poi?.id || null,
-            is_subscribed: true,
-          });
-
-        await sendWhatsAppMessage(
-          from,
-          `🎉 *¡Bienvenido a Santiago te Premia!*\n\n` +
-          (poi ? `Te registraste desde: *${poi.name}*\n\n` : '') +
-          `Tu PIN actual es: *${pin}*\n` +
-          `⏱ Se renueva en ${timeRemaining} segundos\n\n` +
-          `Mostrá este PIN en los comercios adheridos para acceder a descuentos exclusivos.\n\n` +
-          `Escribí *MENU* para ver todas las opciones.`,
-          config.token,
-          config.phoneNumberId
-        );
+      if (existing) {
+        const pin = getCurrentPin(existing.pin_secret, config.pinExp);
+        const remaining = getTimeRemaining(config.pinExp);
+        await sendText(from,
+          `👋 *¡Hola de nuevo, ${existing.name}!*\n\nYa estás registrado.\n\nTu PIN: *${pin}*\n⏱ Se renueva en ${remaining}s`,
+          config.token, config.phoneId);
+        await sendTouristMenu(from, existing.name, config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
       }
 
+      // Nuevo turista: iniciar registro multi-paso
+      await setState(from, 'REG_NAME', { poi_id: poi?.id || null, poi_name: poi?.name || qrId });
+      await sendText(from,
+        `🎉 *¡Bienvenido a Santiago te Premia!*\n\n` +
+        (poi ? `Te registrás desde: *${poi.name}*\n\n` : '') +
+        `Para darte acceso a beneficios exclusivos necesito algunos datos.\n\n` +
+        `📝 *¿Cuál es tu nombre?*`,
+        config.token, config.phoneId);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
     // ============================================================
-    // 2. MENÚ principal
+    // FLUJO DE REGISTRO MULTI-PASO
     // ============================================================
-    if (messageTextLower === 'menu' || messageTextLower === 'menú' || messageTextLower === 'hola') {
-      await sendWhatsAppInteractiveButtons(
-        from,
-        '🏆 Santiago te Premia',
-        '¿Qué querés hacer?\n\nElegí una opción:',
-        [
-          { id: 'comercios', title: '🏪 Comercios' },
-          { id: 'beneficios', title: '🎁 Beneficios' },
-          { id: 'mi_pin', title: '🔑 Mi PIN' },
-        ],
-        config.token,
-        config.phoneNumberId
-      );
+    const convState = await getState(from);
 
-      await sendWhatsAppMessage(
-        from,
-        'También podés escribir:\n4️⃣ *Ayuda* - Para obtener asistencia',
-        config.token,
-        config.phoneNumberId
-      );
+    if (convState.state === 'REG_NAME') {
+      await setState(from, 'REG_LASTNAME', { ...convState.data, name: text.trim() });
+      await sendText(from, `✅ *${text.trim()}*, perfecto.\n\n📝 *¿Cuál es tu apellido?*`, config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
 
+    if (convState.state === 'REG_LASTNAME') {
+      await setState(from, 'REG_BIRTHDATE', { ...convState.data, last_name: text.trim() });
+      await sendText(from,
+        `✅ ${convState.data.name} *${text.trim()}*, ¡encantado!\n\n📝 *¿Cuál es tu fecha de nacimiento?*\n_(Formato: DD/MM/AAAA, ej: 15/03/1990)_`,
+        config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    if (convState.state === 'REG_BIRTHDATE') {
+      await setState(from, 'REG_PROVINCE', { ...convState.data, birth_date: text.trim() });
+      await sendText(from,
+        `✅ Anotado.\n\n📝 *¿De qué provincia sos?*\n_(Ej: Buenos Aires, Córdoba, Tucumán, etc.)_`,
+        config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    if (convState.state === 'REG_PROVINCE') {
+      const d = convState.data;
+      const pinSecret = generatePinSecret();
+
+      // Parsear fecha de nacimiento
+      let birthDate = null;
+      const parts = (d.birth_date || '').split('/');
+      if (parts.length === 3) {
+        birthDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+
+      // Insertar turista
+      await supabaseAdmin.from('tourists').insert({
+        phone: from,
+        name: d.name,
+        last_name: d.last_name,
+        birth_date: birthDate,
+        province: text.trim(),
+        country: 'Argentina',
+        poi_id: d.poi_id,
+        pin_secret: pinSecret,
+        is_subscribed: true,
+      });
+
+      // Limpiar estado de conversación
+      await setState(from, 'IDLE', {});
+
+      const pin = getCurrentPin(pinSecret, config.pinExp);
+      const remaining = getTimeRemaining(config.pinExp);
+
+      await sendText(from,
+        `🎉 *¡Registro completado!*\n\n` +
+        `👤 ${d.name} ${d.last_name}\n` +
+        `📍 ${text.trim()}\n` +
+        (d.poi_name ? `🏨 ${d.poi_name}\n` : '') +
+        `\n` +
+        `Tu PIN actual: *${pin}*\n` +
+        `⏱ Se renueva cada ${config.pinExp} segundos\n\n` +
+        `Mostrá este PIN en los comercios adheridos para acceder a descuentos exclusivos.`,
+        config.token, config.phoneId);
+
+      await sendTouristMenu(from, d.name, config.token, config.phoneId);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
     // ============================================================
-    // 3. COMERCIOS - Listar por categoría (datos reales)
+    // FLUJO VALIDADOR - ESPERANDO PIN
     // ============================================================
-    if (messageTextLower === '1' || messageTextLower === 'comercios') {
-      const { data: businesses } = await supabaseAdmin
-        .from('businesses')
-        .select('name, address, benefit_percentage, categories ( name )')
-        .eq('status', 'ACTIVE')
-        .order('name');
+    if (convState.state === 'WAITING_PIN') {
+      const pinInput = text.trim();
+      const businessId = convState.data.business_id;
+      const businessName = convState.data.business_name;
 
-      let text = '🏪 *Comercios adheridos:*\n\n';
+      // Buscar qué turista tiene este PIN ahora
+      const { data: tourists } = await supabaseAdmin
+        .from('tourists').select('id, name, last_name, pin_secret, province').eq('is_subscribed', true);
 
-      if (businesses && businesses.length > 0) {
-        // Agrupar por categoría
-        const byCategory: Record<string, any[]> = {};
-        for (const b of businesses) {
-          const cat = (b as any).categories?.name || 'Otro';
-          if (!byCategory[cat]) byCategory[cat] = [];
-          byCategory[cat].push(b);
-        }
-
-        for (const [cat, items] of Object.entries(byCategory)) {
-          text += `📂 *${cat}*\n`;
-          for (const item of items) {
-            text += `   • ${item.name} - ${item.address || 'Santiago del Estero'}`;
-            if (item.benefit_percentage > 0) text += ` (${item.benefit_percentage}% dto)`;
-            text += '\n';
+      let foundTourist: any = null;
+      if (tourists) {
+        for (const t of tourists) {
+          if (t.pin_secret && validatePin(t.pin_secret, pinInput, config.pinExp)) {
+            foundTourist = t;
+            break;
           }
-          text += '\n';
         }
-      } else {
-        text += 'Todavía no hay comercios adheridos.\n\n';
       }
 
-      text += 'Presentá tu *PIN* en cualquiera de estos comercios.\nEscribí *MENU* para volver.';
+      await setState(from, 'IDLE', {});
 
-      await sendWhatsAppMessage(from, text, config.token, config.phoneNumberId);
+      if (!foundTourist) {
+        await sendText(from, `❌ *PIN inválido o expirado*\n\nPedile al turista que te genere uno nuevo desde su menú.`, config.token, config.phoneId);
+        await sendValidatorMenu(from, businessName, config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+
+      // Buscar beneficios del comercio
+      const { data: promos } = await supabaseAdmin
+        .from('promotions')
+        .select('id, title, discount_value, type')
+        .eq('business_id', businessId)
+        .eq('is_active', true);
+
+      if (!promos || promos.length === 0) {
+        await sendText(from,
+          `✅ *PIN válido*\n👤 Turista: ${foundTourist.name} ${foundTourist.last_name}\n📍 ${foundTourist.province || ''}\n\n⚠️ No tenés beneficios activos cargados. Pedile al administrador que cargue promociones.`,
+          config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+
+      // Si hay solo 1 promo, registrar directo
+      if (promos.length === 1) {
+        const promo = promos[0];
+        await supabaseAdmin.from('redemptions').insert({
+          tourist_id: foundTourist.id,
+          promotion_id: promo.id,
+          business_id: businessId,
+          pin_used: pinInput,
+          status: 'COMPLETED',
+        });
+        await supabaseAdmin.from('promotions').update({
+          current_uses: (promo as any).current_uses ? (promo as any).current_uses + 1 : 1,
+        }).eq('id', promo.id);
+
+        await sendText(from,
+          `✅ *¡Canje exitoso!*\n\n` +
+          `👤 Turista: *${foundTourist.name} ${foundTourist.last_name}*\n` +
+          `📍 ${foundTourist.province || ''}\n` +
+          `🎁 Beneficio: *${promo.title}*\n` +
+          `🏪 ${businessName}\n` +
+          `📅 ${new Date().toLocaleDateString('es-AR')}\n\n` +
+          `El canje quedó registrado en el sistema. 🎉`,
+          config.token, config.phoneId);
+        await sendValidatorMenu(from, businessName, config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+
+      // Si hay varias promos, listar y preguntar
+      let promoText = `✅ *PIN válido*\n👤 Turista: *${foundTourist.name} ${foundTourist.last_name}*\n📍 ${foundTourist.province || ''}\n\n🎁 *Beneficios disponibles:*\n\n`;
+      promos.forEach((p, i) => {
+        promoText += `${i + 1}️⃣ ${p.title}${p.discount_value > 0 ? ` (${p.discount_value}%)` : ''}\n`;
+      });
+      promoText += `\nEscribí el *número* del beneficio a canjear:`;
+
+      await setState(from, 'SELECTING_PROMO', {
+        business_id: businessId,
+        business_name: businessName,
+        tourist_id: foundTourist.id,
+        tourist_name: `${foundTourist.name} ${foundTourist.last_name}`,
+        pin_used: pinInput,
+        promos: promos.map((p, i) => ({ idx: i + 1, id: p.id, title: p.title })),
+      });
+
+      await sendText(from, promoText, config.token, config.phoneId);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
     // ============================================================
-    // 4. BENEFICIOS - Listar promociones activas (datos reales)
+    // FLUJO VALIDADOR - SELECCIONANDO PROMO
     // ============================================================
-    if (messageTextLower === '2' || messageTextLower === 'beneficios') {
-      const { data: promotions } = await supabaseAdmin
+    if (convState.state === 'SELECTING_PROMO') {
+      const idx = parseInt(text.trim());
+      const d = convState.data;
+      const selected = d.promos?.find((p: any) => p.idx === idx);
+
+      await setState(from, 'IDLE', {});
+
+      if (!selected) {
+        await sendText(from, `❌ Número inválido. Intentá de nuevo desde el menú.`, config.token, config.phoneId);
+        await sendValidatorMenu(from, d.business_name, config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+
+      await supabaseAdmin.from('redemptions').insert({
+        tourist_id: d.tourist_id,
+        promotion_id: selected.id,
+        business_id: d.business_id,
+        pin_used: d.pin_used,
+        status: 'COMPLETED',
+      });
+
+      await sendText(from,
+        `✅ *¡Canje exitoso!*\n\n` +
+        `👤 Turista: *${d.tourist_name}*\n` +
+        `🎁 Beneficio: *${selected.title}*\n` +
+        `🏪 ${d.business_name}\n` +
+        `📅 ${new Date().toLocaleDateString('es-AR')}\n\n` +
+        `El canje quedó registrado en el sistema. 🎉`,
+        config.token, config.phoneId);
+      await sendValidatorMenu(from, d.business_name, config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // ============================================================
+    // BOTONES INTERACTIVOS Y COMANDOS
+    // ============================================================
+
+    // Verificar si es un validador de comercio
+    const validator = await getValidatorBusiness(from);
+
+    // --- MENÚ / HOLA ---
+    if (lower === 'menu' || lower === 'menú' || lower === 'hola' || lower === 'hi' || lower === 'buenas') {
+      if (validator) {
+        const bizName = (validator as any).businesses?.name || 'Tu Comercio';
+        await sendValidatorMenu(from, bizName, config.token, config.phoneId);
+      } else {
+        const { data: tourist } = await supabaseAdmin
+          .from('tourists').select('name').eq('phone', from).single();
+        await sendTouristMenu(from, tourist?.name || '', config.token, config.phoneId);
+      }
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // --- VALIDAR BENEFICIO (solo comercios) ---
+    if (lower === 'validar_pin' || lower === 'validar' || lower === 'validar beneficio') {
+      if (!validator) {
+        await sendText(from, '❌ No estás autorizado como validador de ningún comercio.', config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+      const bizName = (validator as any).businesses?.name || 'Tu Comercio';
+      await setState(from, 'WAITING_PIN', { business_id: validator.business_id, business_name: bizName });
+      await sendText(from,
+        `🔑 *Validar Beneficio - ${bizName}*\n\n` +
+        `Ingresá el PIN de 6 dígitos del turista:`,
+        config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // --- MIS CANJES HOY (comercio) ---
+    if (lower === 'mis_canjes') {
+      if (!validator) {
+        await sendText(from, '❌ No estás autorizado como validador.', config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { data: canjes } = await supabaseAdmin
+        .from('redemptions')
+        .select('created_at, pin_used, tourists ( name, last_name ), promotions ( title )')
+        .eq('business_id', validator.business_id)
+        .gte('created_at', today.toISOString())
+        .order('created_at', { ascending: false });
+
+      let txt = `📋 *Canjes de hoy - ${(validator as any).businesses?.name}*\n\n`;
+      if (!canjes || canjes.length === 0) {
+        txt += 'No hubo canjes hoy.';
+      } else {
+        canjes.forEach((c: any, i) => {
+          const time = new Date(c.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+          txt += `${i + 1}. ${time} - ${c.tourists?.name} ${c.tourists?.last_name} → ${c.promotions?.title}\n`;
+        });
+        txt += `\n*Total: ${canjes.length} canjes*`;
+      }
+      await sendText(from, txt, config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // --- MI PIN (turista o validador con rol turista) ---
+    if (lower === 'mi_pin' || lower === 'pin' || lower === 'mi pin' || lower === 'menu_turista') {
+      const { data: tourist } = await supabaseAdmin
+        .from('tourists').select('name, pin_secret').eq('phone', from).single();
+
+      if (!tourist || !tourist.pin_secret) {
+        await sendText(from,
+          '❌ No estás registrado como turista.\n\nEscaneá un código QR en un hotel o punto turístico para registrarte.',
+          config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+
+      const pin = getCurrentPin(tourist.pin_secret, config.pinExp);
+      const remaining = getTimeRemaining(config.pinExp);
+
+      await sendText(from,
+        `🔑 *Tu PIN actual:*\n\n` +
+        `   🔢 *${pin}*\n\n` +
+        `⏱ Se renueva en *${remaining} segundos*\n\n` +
+        `📱 Mostrá este PIN en el comercio para que te apliquen el descuento.\n\n` +
+        `_Si el PIN expiró, volvé a tocar "Mi PIN" para obtener uno nuevo._`,
+        config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // --- BENEFICIOS ---
+    if (lower === 'beneficios' || lower === '2') {
+      const { data: promos } = await supabaseAdmin
         .from('promotions')
         .select('title, type, discount_value, conditions, businesses ( name )')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      let text = '🎁 *Beneficios disponibles:*\n\n';
-
-      if (promotions && promotions.length > 0) {
-        promotions.forEach((p: any, i) => {
-          text += `${i + 1}️⃣ *${p.title}*\n`;
-          text += `   📍 ${p.businesses?.name || 'Comercio'}\n`;
-          if (p.conditions) text += `   ${p.conditions}\n`;
-          text += '\n';
+      let txt = '🎁 *Beneficios disponibles:*\n\n';
+      if (promos && promos.length > 0) {
+        promos.forEach((p: any, i) => {
+          txt += `${i + 1}️⃣ *${p.title}*\n   📍 ${p.businesses?.name || 'Comercio'}\n`;
+          if (p.conditions) txt += `   ${p.conditions}\n`;
+          txt += '\n';
         });
       } else {
-        text += 'No hay beneficios activos en este momento.\n\n';
+        txt += 'No hay beneficios activos en este momento.\n\n';
       }
-
-      text += 'Para usar estos beneficios, mostrá tu *PIN* en el comercio.\nEscribí *PIN* para ver tu PIN actual.';
-
-      await sendWhatsAppMessage(from, text, config.token, config.phoneNumberId);
+      txt += 'Para usar estos beneficios, tocá *Mi PIN* y mostralo en el comercio.';
+      await sendText(from, txt, config.token, config.phoneId);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    // ============================================================
-    // 5. MI PIN - Generar y mostrar el PIN dinámico (datos reales)
-    // ============================================================
-    if (
-      messageTextLower === '3' ||
-      messageTextLower === 'pin' ||
-      messageTextLower === 'mi pin' ||
-      messageTextLower === 'mi_pin'
-    ) {
-      const { data: tourist } = await supabaseAdmin
-        .from('tourists')
-        .select('name, pin_secret')
-        .eq('phone', from)
-        .single();
+    // --- COMERCIOS ---
+    if (lower === 'comercios' || lower === '1') {
+      const { data: businesses } = await supabaseAdmin
+        .from('businesses')
+        .select('name, address, benefit_percentage, categories ( name )')
+        .eq('status', 'ACTIVE')
+        .order('name');
 
-      if (!tourist || !tourist.pin_secret) {
-        await sendWhatsAppMessage(
-          from,
-          '❌ No estás registrado. Escaneá un código QR en un hotel o punto turístico para registrarte.',
-          config.token,
-          config.phoneNumberId
-        );
-        return NextResponse.json({ success: true }, { status: 200 });
+      let txt = '🏪 *Comercios adheridos:*\n\n';
+      if (businesses && businesses.length > 0) {
+        const byCategory: Record<string, any[]> = {};
+        for (const b of businesses) {
+          const cat = (b as any).categories?.name || 'Otro';
+          if (!byCategory[cat]) byCategory[cat] = [];
+          byCategory[cat].push(b);
+        }
+        for (const [cat, items] of Object.entries(byCategory)) {
+          txt += `📂 *${cat}*\n`;
+          for (const item of items) {
+            txt += `   • ${item.name}`;
+            if (item.benefit_percentage > 0) txt += ` (${item.benefit_percentage}% dto)`;
+            txt += '\n';
+          }
+          txt += '\n';
+        }
+      } else {
+        txt += 'Todavía no hay comercios adheridos.\n';
       }
-
-      const pin = getCurrentPin(tourist.pin_secret, config.pinExpiration);
-      const timeRemaining = getTimeRemaining(config.pinExpiration);
-
-      await sendWhatsAppMessage(
-        from,
-        `🔑 *Tu PIN actual:*\n\n` +
-        `   *${pin}*\n\n` +
-        `⏱ Se renueva en *${timeRemaining} segundos*\n\n` +
-        `📱 Mostrá este PIN en el comercio para que te apliquen el descuento.\n\n` +
-        `_El PIN cambia automáticamente. Si expiró, pedí uno nuevo escribiendo *PIN*._`,
-        config.token,
-        config.phoneNumberId
-      );
-
+      txt += 'Tocá *Mi PIN* y mostralo en cualquiera de estos comercios.';
+      await sendText(from, txt, config.token, config.phoneId);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    // ============================================================
-    // 6. AYUDA
-    // ============================================================
-    if (messageTextLower === '4' || messageTextLower === 'ayuda' || messageTextLower === 'help') {
-      await sendWhatsAppMessage(
-        from,
+    // --- AYUDA ---
+    if (lower === 'ayuda' || lower === 'help' || lower === '4') {
+      await sendText(from,
         `ℹ️ *Ayuda - Santiago te Premia*\n\n` +
         `*¿Qué es Santiago te Premia?*\n` +
-        `Es un programa de beneficios para turistas que visitan Santiago del Estero. ` +
-        `Al registrarte, accedés a descuentos exclusivos en comercios adheridos.\n\n` +
+        `Un programa de beneficios para turistas que visitan Santiago del Estero.\n\n` +
         `*¿Cómo funciona?*\n` +
-        `1️⃣ Escaneá el código QR en tu hotel o punto turístico\n` +
+        `1️⃣ Escaneá el QR en tu hotel\n` +
         `2️⃣ Registrate con tus datos\n` +
-        `3️⃣ Recibí tu PIN dinámico\n` +
-        `4️⃣ Mostrá el PIN en los comercios adheridos\n` +
+        `3️⃣ Tocá *Mi PIN* para obtener tu código\n` +
+        `4️⃣ Mostrá el PIN en el comercio\n` +
         `5️⃣ ¡Disfrutá los descuentos!\n\n` +
-        `*Comandos disponibles:*\n` +
-        `• *MENU* - Ver el menú principal\n` +
-        `• *COMERCIOS* - Ver comercios adheridos\n` +
-        `• *BENEFICIOS* - Ver promociones disponibles\n` +
-        `• *PIN* - Ver tu PIN actual\n` +
-        `• *AYUDA* - Ver esta ayuda\n\n` +
-        `*¿Necesitás más ayuda?*\n` +
         `📧 turismo@camaracomerciosde.gob.ar`,
-        config.token,
-        config.phoneNumberId
-      );
-
+        config.token, config.phoneId);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    // ============================================================
-    // 7. MENSAJE POR DEFECTO
-    // ============================================================
-    await sendWhatsAppMessage(
-      from,
-      `👋 *¡Hola! Soy el bot de Santiago te Premia*\n\n` +
-      `No entendí tu mensaje. Escribí *MENU* para ver las opciones disponibles.\n\n` +
-      `Si todavía no estás registrado, escaneá el código QR en tu hotel o punto turístico.`,
-      config.token,
-      config.phoneNumberId
-    );
+    // --- MENSAJE POR DEFECTO ---
+    // Si es validador, mostrar menú de validador
+    if (validator) {
+      const bizName = (validator as any).businesses?.name || 'Tu Comercio';
+      await sendValidatorMenu(from, bizName, config.token, config.phoneId);
+    } else {
+      await sendText(from,
+        `👋 *¡Hola! Soy el bot de Santiago te Premia*\n\nNo entendí tu mensaje. Escribí *MENU* para ver las opciones.`,
+        config.token, config.phoneId);
+    }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error('[WhatsApp] Error al procesar mensaje:', error);
+    console.error('[WA] Error:', error);
     return NextResponse.json({ success: true }, { status: 200 });
   }
 }
