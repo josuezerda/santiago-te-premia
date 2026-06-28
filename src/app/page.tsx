@@ -1,65 +1,435 @@
-import Image from "next/image";
+import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Home() {
+  const steps = [
+    {
+      num: '01',
+      title: 'Escaneá el QR',
+      desc: 'En tu hotel o punto turístico, escaneá el código QR de Santiago te Premia.',
+      icon: '📱',
+    },
+    {
+      num: '02',
+      title: 'Chateá por WhatsApp',
+      desc: 'Nuestro asistente virtual te guía y te muestra los beneficios disponibles.',
+      icon: '💬',
+    },
+    {
+      num: '03',
+      title: 'Elegí tu beneficio',
+      desc: 'Seleccioná el descuento o promoción que más te guste de los comercios adheridos.',
+      icon: '🎁',
+    },
+    {
+      num: '04',
+      title: 'Presentá tu PIN',
+      desc: 'Recibí un PIN exclusivo y presentalo en el comercio para disfrutar tu beneficio.',
+      icon: '✅',
+    },
+  ];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div style={{ minHeight: '100vh' }}>
+      {/* Public Header */}
+      <header className="header">
+        <div className="container header-content">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Image
+              src="/logo-camara.png"
+              alt="Cámara de Comercio"
+              width={300}
+              height={150}
+              style={{ width: 'auto', height: '45px', objectFit: 'contain' }}
+            />
+            <span className="logo">Santiago te Premia</span>
+          </div>
+          <nav style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <a href="#como-funciona" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
+              ¿Cómo funciona?
+            </a>
+            <a href="#comercios" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
+              Comercios
+            </a>
+            <Link href="/login" className="btn btn-primary">
+              Ingresar
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section style={{
+        padding: '100px 20px 80px',
+        textAlign: 'center',
+        background: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.1) 0%, transparent 60%)',
+        position: 'relative',
+      }}>
+        <div className="container">
+          <div style={{ marginBottom: '32px' }}>
+            <Image
+              src="/logo-camara.png"
+              alt="Cámara de Comercio de Santiago del Estero"
+              width={600}
+              height={300}
+              style={{ width: 'auto', height: '120px', objectFit: 'contain', marginBottom: '24px' }}
+            />
+          </div>
+          <h1 style={{
+            fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+            fontWeight: 700,
+            letterSpacing: '-0.03em',
+            marginBottom: '20px',
+            lineHeight: 1.1,
+          }}>
+            Santiago{' '}
+            <span style={{
+              background: 'linear-gradient(135deg, var(--accent-primary), #818cf8)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              te Premia
+            </span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p style={{
+            fontSize: '1.25rem',
+            color: 'var(--text-secondary)',
+            maxWidth: '640px',
+            margin: '0 auto 40px',
+            lineHeight: 1.7,
+          }}>
+            La <strong>Cámara de Comercio e Industria de Santiago del Estero</strong> celebra sus 100 años premiando a los turistas que nos visitan. 
+            Descubrí la rica cultura, la mejor gastronomía y los comercios más destacados de la Madre de Ciudades, con descuentos exclusivos pensados especialmente para vos.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <Link href="/login" className="btn btn-primary btn-lg">
+              Ingresar al Panel
+            </Link>
+            <a href="#como-funciona" className="btn btn-outline btn-lg">
+              Conocer más
+            </a>
+          </div>
+
+          {/* Mini Stats */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '48px',
+            marginTop: '64px',
+            flexWrap: 'wrap',
+          }}>
+            {[
+              { value: '45+', label: 'Comercios adheridos' },
+              { value: '1,200+', label: 'Turistas registrados' },
+              { value: '850+', label: 'Beneficios canjeados' },
+            ].map((s, i) => (
+              <div key={i} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-primary)' }}>{s.value}</div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="como-funciona" style={{ padding: '80px 20px', background: 'var(--bg-secondary)' }}>
+        <div className="container">
+          <h2 style={{
+            fontSize: '2rem',
+            fontWeight: 700,
+            textAlign: 'center',
+            marginBottom: '12px',
+          }}>
+            ¿Cómo funciona?
+          </h2>
+          <p style={{
+            textAlign: 'center',
+            color: 'var(--text-secondary)',
+            marginBottom: '48px',
+            maxWidth: '500px',
+            margin: '0 auto 48px',
+          }}>
+            En solo 4 pasos comenzá a disfrutar de los beneficios exclusivos para turistas.
+          </p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '24px',
+            maxWidth: '1000px',
+            margin: '0 auto',
+          }}>
+            {steps.map((step) => (
+              <div key={step.num} className="card" style={{
+                textAlign: 'center',
+                padding: '32px 24px',
+                position: 'relative',
+              }}>
+                <div style={{
+                  fontSize: '2.5rem',
+                  marginBottom: '16px',
+                }}>
+                  {step.icon}
+                </div>
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--accent-primary)',
+                  fontWeight: 700,
+                  letterSpacing: '2px',
+                  marginBottom: '8px',
+                }}>
+                  PASO {step.num}
+                </div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '8px' }}>
+                  {step.title}
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                  {step.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Atractivos */}
+      <section style={{ padding: '80px 20px', background: 'var(--bg-primary)' }}>
+        <div className="container">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '40px',
+            alignItems: 'center',
+          }}>
+            <div>
+              <h2 style={{
+                fontSize: '2.2rem',
+                fontWeight: 700,
+                marginBottom: '20px',
+                lineHeight: 1.2,
+              }}>
+                Viví la experiencia de la{' '}
+                <span style={{ color: 'var(--accent-primary)' }}>Madre de Ciudades</span>
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', lineHeight: 1.7, marginBottom: '20px' }}>
+                Santiago del Estero te espera con los brazos abiertos. Somos la ciudad más antigua del país, cuna de tradiciones, folclore y una rica historia que se respira en cada rincón.
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', lineHeight: 1.7, marginBottom: '20px' }}>
+                A través de <strong>Santiago te Premia</strong>, queremos que tu estadía sea inolvidable. Disfrutá de nuestra exquisita gastronomía regional, maravíllate con nuestras artesanías, y descansá en nuestros excelentes hoteles, todo mientras accedes a descuentos pensados exclusivamente para vos como turista.
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, marginTop: '24px' }}>
+                {['Gastronomía regional auténtica', 'Hotelería de primer nivel', 'Comercios y tiendas destacadas', 'Artesanías y cultura viva'].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', fontSize: '1.05rem', fontWeight: 500 }}>
+                    <span style={{ color: 'var(--success)' }}>✓</span> {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(99, 102, 241, 0.05))',
+              borderRadius: 'var(--radius-xl)',
+              padding: '40px',
+              border: '1px solid var(--border-color)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🥟🎸</div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '16px' }}>Tu viaje, recompensado</h3>
+              <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                La Cámara de Comercio y Turismo se enorgullece en recibirte. Registrate con el código de tu hotel o punto de interés turístico y empezá a canjear en minutos usando solo tu WhatsApp.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Comercios Adheridos */}
+      <section id="comercios" style={{ padding: '80px 20px' }}>
+        <div className="container">
+          <h2 style={{
+            fontSize: '2rem',
+            fontWeight: 700,
+            textAlign: 'center',
+            marginBottom: '12px',
+          }}>
+            Comercios Adheridos
+          </h2>
+          <p style={{
+            textAlign: 'center',
+            color: 'var(--text-secondary)',
+            marginBottom: '48px',
+            maxWidth: '500px',
+            margin: '0 auto 48px',
+          }}>
+            Conocé los comercios que participan de esta campaña con beneficios exclusivos para vos.
+          </p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '24px',
+            maxWidth: '900px',
+            margin: '0 auto',
+          }}>
+            {/* Marybe Card */}
+            <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
+              <div style={{
+                height: '180px',
+                position: 'relative',
+                overflow: 'hidden',
+              }}>
+                <Image
+                  src="/comercios/marybe.jpeg"
+                  alt="Marybe"
+                  fill
+                  style={{ objectFit: 'cover' }}
+                />
+              </div>
+              <div style={{ padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Marybe</h3>
+                  <span className="badge badge-success">Activo</span>
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '12px' }}>
+                  Perfumería y fragancias
+                </p>
+                <div style={{
+                  padding: '12px',
+                  background: 'rgba(99, 102, 241, 0.05)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(99, 102, 241, 0.1)',
+                }}>
+                  <span style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
+                    15% de descuento
+                  </span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}> en compras con PIN</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Placeholder Cards */}
+            {[
+              { name: 'Café del Centro', cat: 'Gastronomía', discount: '10% de descuento' },
+              { name: 'Artesanías Santiagueñas', cat: 'Artesanías', discount: '20% de descuento' },
+            ].map((c, i) => (
+              <div key={i} className="card" style={{ overflow: 'hidden', padding: 0 }}>
+                <div style={{
+                  height: '180px',
+                  background: `linear-gradient(135deg, var(--bg-elevated), var(--bg-secondary))`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '3rem',
+                  color: 'var(--border-color)',
+                }}>
+                  🏪
+                </div>
+                <div style={{ padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>{c.name}</h3>
+                    <span className="badge badge-success">Activo</span>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '12px' }}>
+                    {c.cat}
+                  </p>
+                  <div style={{
+                    padding: '12px',
+                    background: 'rgba(99, 102, 241, 0.05)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid rgba(99, 102, 241, 0.1)',
+                  }}>
+                    <span style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
+                      {c.discount}
+                    </span>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}> en compras con PIN</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer style={{
+        padding: '48px 20px',
+        borderTop: '1px solid var(--border-color)',
+        background: 'var(--bg-secondary)',
+      }}>
+        <div className="container" style={{ textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
+            <Image
+              src="/logo-camara.png"
+              alt="Cámara de Comercio"
+              width={200}
+              height={100}
+              style={{ width: 'auto', height: '50px', objectFit: 'contain' }}
+            />
+            <span style={{ fontWeight: 600, fontSize: '1rem' }}>
+              Cámara de Comercio de Santiago del Estero
+            </span>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '500px', margin: '0 auto 20px', lineHeight: 1.6 }}>
+            Santiago te Premia es una iniciativa para promover el turismo y fortalecer el comercio local 
+            de Santiago del Estero, Argentina.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginBottom: '20px' }}>
+            <Link href="/login" style={{ color: 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: 500 }}>
+              Acceso Comercios
+            </Link>
+            <a href="#como-funciona" style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              ¿Cómo funciona?
+            </a>
+            <a href="#comercios" style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              Comercios
+            </a>
+          </div>
+          <p style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+            © 2026 Cámara de Comercio de Santiago del Estero. Todos los derechos reservados.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </footer>
+
+      {/* Floating WhatsApp Button */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .whatsapp-btn {
+          position: fixed;
+          bottom: 30px;
+          right: 30px;
+          width: 60px;
+          height: 60px;
+          background-color: #25D366;
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+          z-index: 1000;
+          transition: transform 0.2s;
+          text-decoration: none;
+          animation: bounce 2s infinite;
+        }
+        .whatsapp-btn:hover {
+          transform: scale(1.1);
+          animation: none;
+        }
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-10px); }
+          60% { transform: translateY(-5px); }
+        }
+      `}} />
+      <a
+        href="https://wa.me/5493850000000?text=Hola,%20quiero%20conocer%20los%20beneficios"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="whatsapp-btn"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" style={{ width: '35px', height: '35px', fill: 'currentColor' }}>
+          <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z" />
+        </svg>
+      </a>
     </div>
   );
 }

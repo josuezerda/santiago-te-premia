@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  BUSINESS
+  HOTEL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String // Hashed password
+  name      String
+  role      Role     @default(BUSINESS)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations depending on role
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id])
+  hotelId    String?
+  hotel      Hotel?    @relation(fields: [hotelId], references: [id])
+}
+
+model Hotel {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  qrCode    String   @unique // Unique identifier for the hotel's QR code
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[] // Admins for this hotel
+  tourists Tourist[] // Tourists registered from this hotel
+}
+
+model Business {
+  id          String   @id @default(cuid())
+  name        String
+  category    String // Ej: Gastronomía, Perfumería
+  address     String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users      User[] // Admins for this business
+  promotions Promotion[]
+}
+
+model Promotion {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+  title       String
+  description String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vouchers Voucher[]
+}
+
+model Tourist {
+  id        String   @id @default(cuid())
+  phone     String   @unique // WhatsApp Number
+  name      String?
+  email     String?
+  hotelId   String
+  hotel     Hotel    @relation(fields: [hotelId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vouchers Voucher[]
+}
+
+enum VoucherStatus {
+  GENERATED
+  REDEEMED
+  EXPIRED
+}
+
+model Voucher {
+  id          String        @id @default(cuid())
+  code        String        @unique // PIN (ej: SGO-4X9P)
+  touristId   String
+  tourist     Tourist       @relation(fields: [touristId], references: [id])
+  promotionId String
+  promotion   Promotion     @relation(fields: [promotionId], references: [id])
+  status      VoucherStatus @default(GENERATED)
+  createdAt   DateTime      @default(now())
+  redeemedAt  DateTime?
+}
