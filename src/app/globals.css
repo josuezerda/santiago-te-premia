@@ -846,3 +846,10 @@ textarea.form-input {
     font-size: 1.8rem;
   }
 }
+
+/* Mobile Utilities */
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+}

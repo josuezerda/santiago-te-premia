@@ -33,7 +33,7 @@ export default function Home() {
     <div style={{ minHeight: '100vh' }}>
       {/* Public Header */}
       <header className="header">
-        <div className="container header-content">
+        <div className="container header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Image
               src="/logo-camara.png"
@@ -42,16 +42,16 @@ export default function Home() {
               height={150}
               style={{ width: 'auto', height: '45px', objectFit: 'contain' }}
             />
-            <span className="logo">Santiago te Premia</span>
+            <span className="logo desktop-only">Santiago te Premia</span>
           </div>
           <nav style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <a href="#como-funciona" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
+            <a href="#como-funciona" className="desktop-only" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
               ¿Cómo funciona?
             </a>
-            <a href="#comercios" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
+            <a href="#comercios" className="desktop-only" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
               Comercios
             </a>
-            <Link href="/login" className="btn btn-primary">
+            <Link href="/login" className="btn btn-primary btn-sm-mobile">
               Ingresar
             </Link>
           </nav>
