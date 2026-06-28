@@ -23,11 +23,16 @@ export default function ConfiguracionPage() {
   const [waBusinessId, setWaBusinessId] = useState('');
   const [pinExpiration, setPinExpiration] = useState(20);
   const [welcomeMessage, setWelcomeMessage] = useState('');
-  const [menuItems, setMenuItems] = useState([
-    { num: 1, label: '🎁 Ver beneficios disponibles' },
-    { num: 2, label: '📋 Mis canjes' },
-    { num: 3, label: 'ℹ️ Información de la campaña' },
-  ]);
+  const defaultMenuItems = [
+    { id: 'mi_pin', label: '🔑 Mi PIN', isHidden: false },
+    { id: 'catalogo', label: '🛍️ Catálogo', isHidden: false },
+    { id: 'perfil', label: '👤 Mi Perfil', isHidden: false },
+    { id: 'recorrido', label: '🗺️ Recorrido Turístico', isHidden: false },
+    { id: 'mis_canjes', label: '📋 Mis Canjes', isHidden: false },
+    { id: 'preguntas', label: '❓ Ayuda / FAQ', isHidden: false },
+    { id: 'premio_final', label: '🎁 Premio Final', isHidden: false },
+  ];
+  const [menuItems, setMenuItems] = useState(defaultMenuItems);
   const [confirmMessage, setConfirmMessage] = useState('');
 
   // Auto-detect webhook URL
@@ -53,8 +58,18 @@ export default function ConfiguracionPage() {
           } else {
             setConfirmMessage('✅ ¡Tu canje fue exitoso!\n\nBeneficio: {{beneficio}}\nComercio: {{comercio}}\nFecha: {{fecha}}\n\n¡Disfrutá tu descuento! 🎉');
           }
-          if (d.main_menu_config?.menuItems) {
-            setMenuItems(d.main_menu_config.menuItems);
+          if (d.main_menu_config?.menuItems && Array.isArray(d.main_menu_config.menuItems)) {
+            // merge with defaults to ensure missing fields exist
+            const fetched = d.main_menu_config.menuItems;
+            const merged = fetched.map((item: any) => ({
+               id: item.id || `item_${Math.random()}`,
+               label: item.label || '',
+               isHidden: item.isHidden || false
+            }));
+            
+            // Add any defaults that are missing
+            const missing = defaultMenuItems.filter(def => !merged.find((m: any) => m.id === def.id));
+            setMenuItems([...merged, ...missing]);
           }
         }
       } catch (err) {
@@ -419,12 +434,40 @@ export default function ConfiguracionPage() {
             </p>
 
             {menuItems.map((item, idx) => (
-              <div key={item.num} className="form-group" style={{
+              <div key={item.id} className="form-group" style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
+                gap: '8px',
                 marginBottom: '12px',
+                opacity: item.isHidden ? 0.6 : 1,
               }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginRight: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (idx === 0) return;
+                      const newItems = [...menuItems];
+                      [newItems[idx - 1], newItems[idx]] = [newItems[idx], newItems[idx - 1]];
+                      setMenuItems(newItems);
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', opacity: idx === 0 ? 0.3 : 1, padding: '2px' }}
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (idx === menuItems.length - 1) return;
+                      const newItems = [...menuItems];
+                      [newItems[idx + 1], newItems[idx]] = [newItems[idx], newItems[idx + 1]];
+                      setMenuItems(newItems);
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: idx === menuItems.length - 1 ? 'default' : 'pointer', opacity: idx === menuItems.length - 1 ? 0.3 : 1, padding: '2px' }}
+                  >
+                    ▼
+                  </button>
+                </div>
+                
                 <span style={{
                   width: '32px',
                   height: '32px',
@@ -437,8 +480,9 @@ export default function ConfiguracionPage() {
                   fontWeight: 600,
                   flexShrink: 0,
                 }}>
-                  {item.num}
+                  {idx + 1}
                 </span>
+                
                 <input
                   className="form-input"
                   value={item.label}
@@ -448,12 +492,30 @@ export default function ConfiguracionPage() {
                     setMenuItems(newItems);
                   }}
                   style={{ flex: 1 }}
+                  placeholder="Texto de la opción"
                 />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newItems = [...menuItems];
+                    newItems[idx] = { ...newItems[idx], isHidden: !newItems[idx].isHidden };
+                    setMenuItems(newItems);
+                  }}
+                  className="btn btn-outline btn-sm"
+                  style={{ padding: '6px 12px' }}
+                  title={item.isHidden ? "Mostrar en WhatsApp" : "Ocultar en WhatsApp"}
+                >
+                  {item.isHidden ? '👁️‍🗨️ Oculto' : '👁️ Visible'}
+                </button>
               </div>
             ))}
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '16px' }}>
+              ℹ️ Podés ocultar elementos que no estén listos todavía. El orden mostrado aquí es el mismo orden en el que aparecerán en la lista de WhatsApp.
+            </p>
           </div>
 
-          <div className="card-static">
+          <div className="card-static" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '24px' }}>
               Mensaje de Confirmación de Canje
             </h3>

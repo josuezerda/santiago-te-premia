@@ -89,17 +89,78 @@ async function getValidatorBusiness(phone: string) {
 }
 
 // ============================================================
+// Enviar lista interactiva (hasta 10 opciones)
+// ============================================================
+async function sendListMessage(to: string, header: string, body: string, buttonText: string, items: { id: string; title: string; desc?: string }[], token: string, phoneId: string) {
+  if (!token || !phoneId || items.length === 0) return;
+  
+  const rows = items.map(item => ({
+    id: item.id,
+    title: item.title.substring(0, 24),
+    description: item.desc ? item.desc.substring(0, 72) : undefined
+  }));
+
+  await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp', 
+      to, 
+      type: 'interactive',
+      interactive: {
+        type: 'list',
+        header: { type: 'text', text: header },
+        body: { text: body },
+        action: {
+          button: buttonText.substring(0, 20),
+          sections: [
+            {
+              title: 'Opciones',
+              rows: rows
+            }
+          ]
+        }
+      }
+    }),
+  }).catch(e => console.error('[WA] List error:', e));
+}
+
+// ============================================================
 // Menú principal del turista
 // ============================================================
 async function sendTouristMenu(to: string, name: string, token: string, phoneId: string) {
-  await sendButtons(to, '🏆 Santiago te Premia',
-    `¡Hola${name ? ', ' + name : ''}! ¿Qué querés hacer?`,
-    [
-      { id: 'mi_pin', title: '🔑 Mi PIN' },
-      { id: 'catalogo', title: '🛍️ Catálogo' },
-      { id: 'preguntas', title: '❓ Ayuda / FAQ' },
-    ], token, phoneId);
-  await sendText(to, 'Seleccioná una de las opciones arriba.', token, phoneId);
+  const { data: settings } = await supabaseAdmin
+    .from('system_settings')
+    .select('main_menu_config')
+    .limit(1)
+    .single();
+
+  let items = [
+    { id: 'mi_pin', title: '🔑 Mi PIN' },
+    { id: 'catalogo', title: '🛍️ Catálogo' },
+    { id: 'preguntas', title: '❓ Ayuda / FAQ' },
+  ];
+
+  if (settings?.main_menu_config?.menuItems) {
+    // Filtrar los ocultos
+    const visibleItems = settings.main_menu_config.menuItems.filter((i: any) => !i.isHidden);
+    if (visibleItems.length > 0) {
+      items = visibleItems.map((i: any) => ({ id: i.id, title: i.label }));
+    }
+  }
+
+  // Si hay más de 3 usamos sendListMessage, sino sendButtons para ser retrocompatibles
+  if (items.length > 3) {
+    await sendListMessage(to, '🏆 Santiago te Premia',
+      `¡Hola${name ? ', ' + name : ''}! Elegí una opción del menú:`,
+      'Abrir Menú',
+      items, token, phoneId);
+  } else {
+    await sendButtons(to, '🏆 Santiago te Premia',
+      `¡Hola${name ? ', ' + name : ''}! ¿Qué querés hacer?`,
+      items, token, phoneId);
+    await sendText(to, 'Seleccioná una de las opciones arriba.', token, phoneId);
+  }
 }
 
 // ============================================================
@@ -418,33 +479,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    // --- MIS CANJES HOY (comercio) ---
+    // --- MIS CANJES (Comercio o Turista) ---
     if (lower === 'mis_canjes') {
-      if (!validator) {
-        await sendText(from, '❌ No estás autorizado como validador.', config.token, config.phoneId);
+      if (validator) {
+        // Lógica para el validador (comercio)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const { data: canjes } = await supabaseAdmin
+          .from('redemptions')
+          .select('created_at, pin_used, tourists ( name, last_name ), promotions ( title )')
+          .eq('business_id', validator.business_id)
+          .gte('created_at', today.toISOString())
+          .order('created_at', { ascending: false });
+
+        let txt = `📋 *Canjes de hoy - ${(validator as any).businesses?.name}*\n\n`;
+        if (!canjes || canjes.length === 0) {
+          txt += 'No hubo canjes hoy.';
+        } else {
+          canjes.forEach((c: any, i) => {
+            const time = new Date(c.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+            txt += `${i + 1}. ${time} - ${c.tourists?.name} ${c.tourists?.last_name} → ${c.promotions?.title}\n`;
+          });
+          txt += `\n*Total: ${canjes.length} canjes*`;
+        }
+        await sendText(from, txt, config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
+      } else {
+        // Lógica para el turista
+        const { data: tourist } = await supabaseAdmin
+          .from('tourists').select('id, name').eq('phone', from).single();
+
+        if (!tourist) {
+          await sendText(from, '❌ No estás registrado como turista.', config.token, config.phoneId);
+          return NextResponse.json({ success: true }, { status: 200 });
+        }
+
+        const { createTouristToken } = require('@/lib/jwt');
+        const token = await createTouristToken(tourist.id, tourist.name);
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://santiagotepremia.vercel.app';
+        
+        await sendText(from,
+          `📋 *Mis Canjes*\n\n` +
+          `Podés ver todo tu historial de canjes tocando este enlace (pestaña "Canjes"):\n\n` +
+          `👉 ${baseUrl}/catalogo?token=${token}&tab=canjes`,
+          config.token, config.phoneId);
         return NextResponse.json({ success: true }, { status: 200 });
       }
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const { data: canjes } = await supabaseAdmin
-        .from('redemptions')
-        .select('created_at, pin_used, tourists ( name, last_name ), promotions ( title )')
-        .eq('business_id', validator.business_id)
-        .gte('created_at', today.toISOString())
-        .order('created_at', { ascending: false });
-
-      let txt = `📋 *Canjes de hoy - ${(validator as any).businesses?.name}*\n\n`;
-      if (!canjes || canjes.length === 0) {
-        txt += 'No hubo canjes hoy.';
-      } else {
-        canjes.forEach((c: any, i) => {
-          const time = new Date(c.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-          txt += `${i + 1}. ${time} - ${c.tourists?.name} ${c.tourists?.last_name} → ${c.promotions?.title}\n`;
-        });
-        txt += `\n*Total: ${canjes.length} canjes*`;
-      }
-      await sendText(from, txt, config.token, config.phoneId);
-      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     // --- MI PIN (turista o validador con rol turista) ---
@@ -513,6 +593,39 @@ export async function POST(request: NextRequest) {
         `📧 turismo@camaracomerciosde.gob.ar`;
 
       await sendText(from, faqText, config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // --- PERFIL Y RECORRIDO TURÍSTICO ---
+    if (lower === 'perfil' || lower === 'recorrido') {
+      const { data: tourist } = await supabaseAdmin
+        .from('tourists').select('id, name').eq('phone', from).single();
+      
+      if (!tourist) {
+        await sendText(from, '❌ No estás registrado como turista.', config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+
+      const { createTouristToken } = require('@/lib/jwt');
+      const token = await createTouristToken(tourist.id, tourist.name);
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://santiagotepremia.vercel.app';
+      
+      const tabName = lower === 'perfil' ? 'Mi Perfil' : 'Recorrido Turístico';
+      await sendText(from,
+        `👤 *${tabName}*\n\n` +
+        `Podés acceder a esta sección tocando el siguiente enlace:\n\n` +
+        `👉 ${baseUrl}/catalogo?token=${token}&tab=${lower}`,
+        config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // --- PREMIO FINAL ---
+    if (lower === 'premio_final') {
+      await sendText(from,
+        `🎁 *Premio Final - Santiago te Premia*\n\n` +
+        `¡Próximamente estaremos anunciando un gran sorteo exclusivo para todos los turistas que participan del programa!\n\n` +
+        `Mientras más beneficios canjees, más chances vas a tener de ganar. ¡Quedate atento a las novedades!`,
+        config.token, config.phoneId);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
