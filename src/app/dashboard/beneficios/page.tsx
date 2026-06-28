@@ -12,6 +12,7 @@ interface Beneficio {
   validTo: string;
   uses: number;
   active: boolean;
+  image_url: string;
 }
 
 const typeBadgeMap: Record<string, { label: string; badge: string }> = {
@@ -34,8 +35,10 @@ export default function BeneficiosPage() {
     discount_value: '',
     conditions: '',
     start_date: '',
-    end_date: ''
+    end_date: '',
+    image_url: ''
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formSaving, setFormSaving] = useState(false);
 
   useEffect(() => {
@@ -75,6 +78,7 @@ export default function BeneficiosPage() {
         validTo: b.end_date ? new Date(b.end_date).toLocaleDateString() : '-',
         uses: b.current_uses || 0,
         active: b.is_active,
+        image_url: b.description || '', // Usamos description para guardar la URL de la imagen
       }));
       setBeneficios(mapped);
     }
@@ -88,6 +92,35 @@ export default function BeneficiosPage() {
   const toggleActive = async (id: string, currentStatus: boolean) => {
     setBeneficios(prev => prev.map(b => b.id === id ? { ...b, active: !currentStatus } : b));
     await supabase.from('promotions').update({ is_active: !currentStatus, status: !currentStatus ? 'ACTIVE' : 'PAUSED' }).eq('id', id);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `promotions/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+      
+      setFormData(prev => ({ ...prev, image_url: data.publicUrl }));
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      alert('Error al subir la imagen. Asegurate de que pese menos de 2MB.');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleCreatePromotion = async (e: React.FormEvent) => {
@@ -104,12 +137,12 @@ export default function BeneficiosPage() {
       start_date: formData.start_date ? new Date(formData.start_date).toISOString() : null,
       end_date: formData.end_date ? new Date(formData.end_date).toISOString() : null,
       is_active: true,
-      status: 'ACTIVE'
+      description: formData.image_url // Guardamos la URL en description
     });
 
     if (!error) {
       setShowModal(false);
-      setFormData({ title: '', type: 'PERCENTAGE', discount_value: '', conditions: '', start_date: '', end_date: '' });
+      setFormData({ title: '', type: 'PERCENTAGE', discount_value: '', conditions: '', start_date: '', end_date: '', image_url: '' });
       fetchBeneficios();
     } else {
       alert('Error al crear promoción');
@@ -163,23 +196,23 @@ export default function BeneficiosPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    marginBottom: '8px',
-                  }}>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 600 }}>
-                      {beneficio.title}
-                    </h3>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '12px' }}>
+                    {beneficio.image_url && (
+                      <img src={beneficio.image_url} alt={beneficio.title} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                    )}
+                    <div>
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {beneficio.title}
+                        <span className={`badge ${typeBadgeMap[beneficio.type]?.badge || 'badge-neutral'}`} style={{ fontSize: '0.7rem' }}>
+                          {typeBadgeMap[beneficio.type]?.label || beneficio.type}
+                        </span>
+                      </h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
+                        {beneficio.value && <strong>{beneficio.value} · </strong>}
+                        {beneficio.conditions}
+                      </p>
+                    </div>
                   </div>
-
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                    <span className={`badge ${typeBadgeMap[beneficio.type]?.badge || 'badge-neutral'}`}>
-                      {typeBadgeMap[beneficio.type]?.label || beneficio.type}
-                    </span>
-                    {beneficio.value && <span className="badge badge-neutral">{beneficio.value}</span>}
-                  </div>
-
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '8px' }}>
-                    📋 {beneficio.conditions}
-                  </p>
 
                   <div style={{
                     display: 'flex',
@@ -271,7 +304,20 @@ export default function BeneficiosPage() {
 
               <div className="form-group">
                 <label className="form-label">Condiciones *</label>
-                <textarea className="form-input" rows={3} placeholder="Ej: Compra mínima de $5,000. No acumulable." value={formData.conditions} onChange={e => setFormData({...formData, conditions: e.target.value})} required />
+                <textarea className="form-input" required rows={3} placeholder="Ej: Válido solo pago en efectivo. No acumulable." value={formData.conditions} onChange={e => setFormData({...formData, conditions: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Imagen del Producto (Opcional)</label>
+                {formData.image_url ? (
+                  <div style={{ marginBottom: '10px', position: 'relative', display: 'inline-block' }}>
+                    <img src={formData.image_url} alt="Vista previa" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px' }} />
+                    <button type="button" onClick={() => setFormData({...formData, image_url: ''})} style={{ position: 'absolute', top: '-10px', right: '-10px', background: 'var(--error)', color: 'white', borderRadius: '50%', width: '24px', height: '24px', border: 'none', cursor: 'pointer' }}>✕</button>
+                  </div>
+                ) : (
+                  <input type="file" accept="image/*" className="form-input" onChange={handleImageUpload} disabled={uploadingImage} style={{ padding: '8px' }} />
+                )}
+                {uploadingImage && <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Subiendo imagen...</p>}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
