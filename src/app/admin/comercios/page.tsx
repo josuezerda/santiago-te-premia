@@ -19,7 +19,7 @@ const categories = ['Todos', 'Gastronomía', 'Perfumería', 'Artesanías', 'Salu
 export default function ComerciosPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [comerciosData, setComerciosData] = useState<Comercio[]>([]);
   const [loading, setLoading] = useState(true);
   const [dbCategories, setDbCategories] = useState<{id: string, name: string}[]>([]);
@@ -28,7 +28,6 @@ export default function ComerciosPage() {
   const [formData, setFormData] = useState({
     name: '',
     category_id: '',
-    benefit_percentage: '',
     address: '',
     phone: '',
     user_email: '',
@@ -41,8 +40,8 @@ export default function ComerciosPage() {
     const { data, error } = await supabase
       .from('businesses')
       .select(`
-        id, name, address, benefit_percentage, status, logo_url,
-        categories ( name )
+        id, name, address, benefit_percentage, status, logo_url, phone,
+        categories ( id, name )
       `);
 
     if (error) {
@@ -52,7 +51,9 @@ export default function ComerciosPage() {
         id: b.id,
         name: b.name,
         category: b.categories?.name || 'Otro',
+        category_id: b.categories?.id || '',
         address: b.address,
+        phone: b.phone || '',
         discount: b.benefit_percentage > 0 ? `${b.benefit_percentage}%` : 'Beneficio',
         status: b.status.toLowerCase() as any,
         image: b.logo_url || undefined,
@@ -73,32 +74,73 @@ export default function ComerciosPage() {
     fetchCategories();
   }, []);
 
-  const handleCreateBusiness = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingId(null);
+    setFormData({ name: '', category_id: '', address: '', phone: '', user_email: '', user_password: '', validator_phone: '', validator_name: '' });
+    setShowModal(true);
+  };
+
+  const handleEditClick = async (c: Comercio) => {
+    setEditingId(c.id);
+    setFormData({
+      name: c.name,
+      category_id: (c as any).category_id,
+      address: c.address,
+      phone: (c as any).phone,
+      user_email: '',
+      user_password: '',
+      validator_phone: '',
+      validator_name: '',
+    });
+    
+    // Fetch user email for this business
+    try {
+      const res = await fetch(`/api/businesses/${c.id}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        setFormData(prev => ({
+          ...prev,
+          user_email: data.data.user_email || '',
+        }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
     setFormSaving(true);
 
     try {
-      const res = await fetch('/api/businesses', {
-        method: 'POST',
+      const url = editingId ? `/api/businesses/${editingId}` : '/api/businesses';
+      const method = editingId ? 'PUT' : 'POST';
+
+      const payload: any = {
+        name: formData.name,
+        category_id: formData.category_id,
+        address: formData.address,
+        phone: formData.phone,
+        user_name: formData.name,
+      };
+
+      if (formData.user_email) payload.user_email = formData.user_email;
+      if (formData.user_password) payload.user_password = formData.user_password;
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          category_id: formData.category_id,
-          benefit_percentage: Number(formData.benefit_percentage) || 0,
-          address: formData.address,
-          phone: formData.phone,
-          user_email: formData.user_email,
-          user_password: formData.user_password,
-          user_name: formData.name,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Si se puso un número de validador, crearlo
-        if (formData.validator_phone && data.data?.id) {
+        // Si se puso un número de validador y es creación
+        if (!editingId && formData.validator_phone && data.data?.id) {
           await fetch(`/api/businesses/${data.data.id}/validators`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -109,12 +151,11 @@ export default function ComerciosPage() {
           });
         }
 
-        alert(`✅ ${data.message}`);
+        alert(`✅ ${data.message || (editingId ? 'Comercio actualizado' : 'Comercio creado')}`);
         setShowModal(false);
-        setFormData({ name: '', category_id: '', benefit_percentage: '', address: '', phone: '', user_email: '', user_password: '', validator_phone: '', validator_name: '' });
         fetchBusinesses();
       } else {
-        setFormError(data.error || 'Error al crear el comercio');
+        setFormError(data.error || `Error al ${editingId ? 'actualizar' : 'crear'} el comercio`);
       }
     } catch (err) {
       setFormError('Error de conexión');
@@ -149,7 +190,7 @@ export default function ComerciosPage() {
             {comerciosData.length} comercios registrados · {comerciosData.filter(c => c.status === 'active').length} activos
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={openCreateModal}>
           + Nuevo Comercio
         </button>
       </div>
@@ -272,7 +313,7 @@ export default function ComerciosPage() {
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn btn-outline btn-sm" style={{ flex: 1 }}>
+                <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => handleEditClick(comercio)}>
                   ✏️ Editar
                 </button>
                 <button className="btn btn-outline btn-sm" style={{
@@ -300,37 +341,31 @@ export default function ComerciosPage() {
         </div>
       )}
 
-      {/* New Comercio Modal */}
+      {/* Modal Comercio */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 600 }}>Nuevo Comercio</h2>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 600 }}>{editingId ? 'Editar Comercio' : 'Nuevo Comercio'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateBusiness}>
+            <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="form-label">Nombre del Comercio *</label>
                 <input className="form-input" placeholder="Ej: Café del Centro" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Categoría *</label>
-                  <select className="form-input" value={formData.category_id} onChange={(e) => setFormData({...formData, category_id: e.target.value})} required>
-                    <option value="">Seleccioná una categoría</option>
-                    {dbCategories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Descuento (%)</label>
-                  <input className="form-input" type="number" placeholder="Ej: 15" value={formData.benefit_percentage} onChange={(e) => setFormData({...formData, benefit_percentage: e.target.value})} />
-                </div>
+              <div className="form-group">
+                <label className="form-label">Categoría *</label>
+                <select className="form-input" value={formData.category_id} onChange={(e) => setFormData({...formData, category_id: e.target.value})} required>
+                  <option value="">Seleccioná una categoría</option>
+                  {dbCategories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
@@ -354,46 +389,50 @@ export default function ComerciosPage() {
                   🔑 Acceso al Dashboard del Comercio
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '16px' }}>
-                  Estas credenciales le permitirán al comercio ingresar a su panel para validar PINs y gestionar sus beneficios.
+                  Estas credenciales le permitirán al comercio ingresar a su panel.
                 </p>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label className="form-label">Email de acceso *</label>
-                  <input className="form-input" type="email" placeholder="comercio@email.com" value={formData.user_email} onChange={(e) => setFormData({...formData, user_email: e.target.value})} required />
+                  <label className="form-label">Email de acceso {editingId ? '' : '*'}</label>
+                  <input className="form-input" type="email" placeholder="comercio@email.com" value={formData.user_email} onChange={(e) => setFormData({...formData, user_email: e.target.value})} required={!editingId} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Contraseña *</label>
-                  <input className="form-input" type="text" placeholder="Contraseña inicial" value={formData.user_password} onChange={(e) => setFormData({...formData, user_password: e.target.value})} required />
+                  <label className="form-label">Contraseña {editingId ? '(Dejar vacío para no cambiar)' : '*'}</label>
+                  <input className="form-input" type="text" placeholder={editingId ? "Nueva contraseña..." : "Contraseña inicial"} value={formData.user_password} onChange={(e) => setFormData({...formData, user_password: e.target.value})} required={!editingId} />
                 </div>
               </div>
 
               {/* Separador: Validadores WhatsApp */}
-              <div style={{
-                borderTop: '1px solid var(--border-color)',
-                marginTop: '24px',
-                paddingTop: '20px',
-                marginBottom: '16px',
-              }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '4px' }}>
-                  📱 Validador por WhatsApp
-                </h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '16px' }}>
-                  Número de WhatsApp autorizado a validar PINs de turistas desde el asistente. Podés agregar más validadores después.
-                </p>
-              </div>
+              {!editingId && (
+                <>
+                  <div style={{
+                    borderTop: '1px solid var(--border-color)',
+                    marginTop: '24px',
+                    paddingTop: '20px',
+                    marginBottom: '16px',
+                  }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '4px' }}>
+                      📱 Validador por WhatsApp
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '16px' }}>
+                      Número de WhatsApp autorizado a validar PINs de turistas. Podés agregar más desde el dashboard.
+                    </p>
+                  </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Nº WhatsApp del validador</label>
-                  <input className="form-input" placeholder="5493854000000" value={formData.validator_phone} onChange={(e) => setFormData({...formData, validator_phone: e.target.value})} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Nombre del validador</label>
-                  <input className="form-input" placeholder="Ej: Juan (cajero)" value={formData.validator_name} onChange={(e) => setFormData({...formData, validator_name: e.target.value})} />
-                </div>
-              </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Nº WhatsApp del validador</label>
+                      <input className="form-input" placeholder="5493854000000" value={formData.validator_phone} onChange={(e) => setFormData({...formData, validator_phone: e.target.value})} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Nombre del validador</label>
+                      <input className="form-input" placeholder="Ej: Juan (cajero)" value={formData.validator_name} onChange={(e) => setFormData({...formData, validator_name: e.target.value})} />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {formError && (
                 <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-md)', color: 'var(--error)', fontSize: '0.85rem', marginBottom: '16px' }}>
@@ -406,7 +445,7 @@ export default function ComerciosPage() {
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={formSaving}>
-                  {formSaving ? '⏳ Creando...' : '✅ Crear Comercio + Usuario'}
+                  {formSaving ? '⏳ Guardando...' : (editingId ? '✅ Guardar Cambios' : '✅ Crear Comercio')}
                 </button>
               </div>
             </form>

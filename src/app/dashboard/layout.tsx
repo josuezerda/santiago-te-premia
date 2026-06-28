@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 const navLinks = [
   { href: '/dashboard', label: 'Mi Panel', icon: '📊' },
@@ -18,6 +19,18 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [business, setBusiness] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const b = localStorage.getItem('stp_business');
+      if (b) {
+        setBusiness(JSON.parse(b));
+      }
+    } catch (e) {
+      console.error('Error reading business from storage', e);
+    }
+  }, []);
 
   return (
     <div className="dashboard-grid">
@@ -39,20 +52,25 @@ export default function DashboardLayout({
             overflow: 'hidden',
             flexShrink: 0,
             position: 'relative',
+            backgroundColor: 'var(--bg-elevated)'
           }}>
-            <Image
-              src="/comercios/marybe.jpeg"
-              alt="Marybe"
-              fill
-              style={{ objectFit: 'cover' }}
-            />
+            {business?.logo_url ? (
+              <Image
+                src={business.logo_url}
+                alt={business.name || 'Comercio'}
+                fill
+                style={{ objectFit: 'cover' }}
+              />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '1.5rem' }}>🏪</div>
+            )}
           </div>
           <div>
             <div style={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.2 }}>
-              Marybe
+              {business?.name || 'Cargando...'}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Perfumería
+              {business?.categories?.name || 'Comercio Adherido'}
             </div>
           </div>
         </div>
@@ -98,34 +116,30 @@ export default function DashboardLayout({
             padding: '8px',
           }}>
             <div style={{
-              width: '36px',
-              height: '36px',
+              width: '32px',
+              height: '32px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--success), #0d9668)',
+              background: 'var(--bg-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              flexShrink: 0,
+              fontSize: '0.8rem',
+              border: '1px solid var(--border-color)',
             }}>
-              MB
+              👤
             </div>
             <div style={{ overflow: 'hidden' }}>
-              <div style={{ fontWeight: 500, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                Maribel
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                marybe@comercio.com
+              <div style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                Administrador
               </div>
             </div>
           </div>
-          <Link
-            href="/"
-            className="sidebar-link"
-            style={{ color: 'var(--error)', fontSize: '0.85rem' }}
-          >
-            <span>🚪</span>
+          <Link href="/login" className="sidebar-link" style={{ color: 'var(--error)' }} onClick={() => {
+            localStorage.removeItem('stp_token');
+            localStorage.removeItem('stp_user');
+            localStorage.removeItem('stp_business');
+          }}>
+            <span style={{ fontSize: '1rem' }}>🚪</span>
             <span>Cerrar Sesión</span>
           </Link>
         </div>

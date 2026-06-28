@@ -1,25 +1,33 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function CommerceDashboard() {
   const [pin, setPin] = useState('');
   const [validationResult, setValidationResult] = useState<null | 'success' | 'error'>(null);
+  
+  const [business, setBusiness] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const b = localStorage.getItem('stp_business');
+      const u = localStorage.getItem('stp_user');
+      if (b) setBusiness(JSON.parse(b));
+      if (u) setUser(JSON.parse(u));
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   const stats = [
-    { label: 'Total Canjes', value: '124', accent: '', icon: '🔄' },
-    { label: 'Canjes Hoy', value: '8', accent: 'success', icon: '📈' },
-    { label: 'Beneficios Activos', value: '3', accent: '', icon: '🎁' },
-    { label: 'Turistas Atendidos', value: '98', accent: 'warning', icon: '👤' },
+    { label: 'Total Canjes', value: '0', accent: '', icon: '🔄' },
+    { label: 'Canjes Hoy', value: '0', accent: 'success', icon: '📈' },
+    { label: 'Beneficios Activos', value: '0', accent: '', icon: '🎁' },
+    { label: 'Turistas Atendidos', value: '0', accent: 'warning', icon: '👤' },
   ];
 
-  const recentCanjes = [
-    { tourist: 'María García', benefit: '15% en perfumería', pin: 'SGO-8742', time: 'Hace 15 min', status: 'completado' },
-    { tourist: 'Carlos López', benefit: '15% en perfumería', pin: 'SGO-3291', time: 'Hace 1 hora', status: 'completado' },
-    { tourist: 'Pedro Ruiz', benefit: '15% en perfumería', pin: 'SGO-7654', time: 'Hace 2 horas', status: 'completado' },
-    { tourist: 'Ana Martínez', benefit: '15% en perfumería', pin: 'SGO-1928', time: 'Hace 3 horas', status: 'expirado' },
-    { tourist: 'Diego Sánchez', benefit: '15% en perfumería', pin: 'SGO-5043', time: 'Ayer 18:30', status: 'completado' },
-  ];
+  const recentCanjes: any[] = [];
 
   const handleValidate = () => {
     if (!pin.trim()) return;
@@ -42,7 +50,7 @@ export default function CommerceDashboard() {
             Mi Panel
           </h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Bienvenida, Maribel — Marybe Perfumería
+            Bienvenid@, {user?.name || user?.email || 'Administrador'} — {business?.name || 'Comercio'}
           </p>
         </div>
         <Link href="/dashboard/validar" className="btn btn-success">
@@ -101,30 +109,14 @@ export default function CommerceDashboard() {
               fontFamily: 'monospace',
               fontSize: '1.1rem',
               letterSpacing: '2px',
-              textAlign: 'center',
+              textTransform: 'uppercase',
             }}
           />
-          <button
-            className="btn btn-success"
-            onClick={handleValidate}
-            disabled={!pin.trim()}
-          >
+          <button className="btn btn-success" onClick={handleValidate}>
             Validar
           </button>
         </div>
 
-        {/* Validation Result */}
-        {validationResult === 'success' && (
-          <div style={{
-            marginTop: '16px',
-            padding: '16px',
-            background: 'rgba(16, 185, 129, 0.1)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid rgba(16, 185, 129, 0.2)',
-            animation: 'fadeIn 0.3s ease-out',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', fontWeight: 600 }}>
-              ✅ PIN válido — María García
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
               Beneficio: 15% en perfumería · Origen: Buenos Aires

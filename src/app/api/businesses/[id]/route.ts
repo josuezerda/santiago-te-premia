@@ -6,38 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import type { ApiResponse, Business, BusinessStatus } from '@/lib/types';
-
-// Mock de comercio individual para desarrollo
-const mockBusiness: Business = {
-  id: 'biz_001',
-  name: 'MaryBe Perfumería',
-  category: 'Perfumería',
-  category_id: 'cat_001',
-  address: 'Av. Belgrano Sur 123, Santiago del Estero',
-  description: 'Perfumería y cosmética premium',
-  phone: '+54 385 4123456',
-  email: 'marybe@comercio.com',
-  status: 'ACTIVE' as BusinessStatus,
-  created_at: '2025-01-15T10:00:00Z',
-  updated_at: '2025-01-15T10:00:00Z',
-  promotions: [
-    {
-      id: 'promo_001',
-      business_id: 'biz_001',
-      title: '20% en perfumes importados',
-      description: 'Descuento en toda la línea de perfumes importados',
-      discount_type: 'PERCENTAGE',
-      discount_value: 20,
-      max_uses: 100,
-      current_uses: 45,
-      active: true,
-      status: 'ACTIVE',
-      created_at: '2025-01-20T10:00:00Z',
-      updated_at: '2025-01-20T10:00:00Z',
-    },
-  ],
-};
+import type { ApiResponse, Business } from '@/lib/types';
+import bcrypt from 'bcryptjs';
 
 export async function GET(
   request: NextRequest,
@@ -46,27 +16,21 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // TODO: Consulta real a Supabase
-    // const { data, error } = await supabaseAdmin
-    //   .from('businesses')
-    //   .select('*, promotions(*), category_info:categories(*), users(*)')
-    //   .eq('id', id)
-    //   .single();
-    // if (error || !data) return 404;
+    const { data, error } = await supabaseAdmin
+      .from('businesses')
+      .select('*, categories ( name ), users(email)')
+      .eq('id', id)
+      .single();
 
-    // Mock: retornar el comercio si el ID coincide
-    if (id !== mockBusiness.id && id !== 'biz_001') {
+    if (error || !data) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: 'Comercio no encontrado' },
         { status: 404 }
       );
     }
 
-    console.log(`[Businesses] GET /${id} - Detalle del comercio`);
-    void supabaseAdmin;
-
-    return NextResponse.json<ApiResponse<Business>>(
-      { success: true, data: { ...mockBusiness, id } },
+    return NextResponse.json(
+      { success: true, data: { ...data, user_email: data.users?.[0]?.email || '' } },
       { status: 200 }
     );
   } catch (error) {
@@ -86,31 +50,39 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    // TODO: Verificar autorización
-    // Solo SUPER_ADMIN o el usuario del comercio pueden editar
+    const { user_email, user_password, user_name, ...businessData } = body;
 
-    // TODO: Actualizar en Supabase
-    // const { data, error } = await supabaseAdmin
-    //   .from('businesses')
-    //   .update({ ...body, updated_at: new Date().toISOString() })
-    //   .eq('id', id)
-    //   .select()
-    //   .single();
-    // if (error) return 500;
-    // if (!data) return 404;
+    // Actualizar datos del comercio
+    if (Object.keys(businessData).length > 0) {
+      const { error: bizErr } = await supabaseAdmin
+        .from('businesses')
+        .update({ ...businessData, updated_at: new Date().toISOString() })
+        .eq('id', id);
 
-    const updatedBusiness: Business = {
-      ...mockBusiness,
-      ...body,
-      id,
-      updated_at: new Date().toISOString(),
-    };
+      if (bizErr) throw bizErr;
+    }
 
-    console.log(`[Businesses] PUT /${id} - Comercio actualizado`);
-    void supabaseAdmin;
+    // Actualizar usuario si se proveen credenciales
+    if (user_email || user_password) {
+      const userUpdatePayload: any = {};
+      if (user_email) userUpdatePayload.email = user_email.toLowerCase().trim();
+      if (user_password) {
+        userUpdatePayload.password_hash = await bcrypt.hash(user_password, 10);
+      }
+      if (user_name) userUpdatePayload.name = user_name;
 
-    return NextResponse.json<ApiResponse<Business>>(
-      { success: true, data: updatedBusiness, message: 'Comercio actualizado exitosamente' },
+      if (Object.keys(userUpdatePayload).length > 0) {
+        const { error: userErr } = await supabaseAdmin
+          .from('users')
+          .update(userUpdatePayload)
+          .eq('business_id', id);
+
+        if (userErr) throw userErr;
+      }
+    }
+
+    return NextResponse.json<ApiResponse>(
+      { success: true, message: 'Comercio actualizado exitosamente' },
       { status: 200 }
     );
   } catch (error) {
@@ -129,25 +101,21 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // TODO: Verificar que sea SUPER_ADMIN
+    // Soft delete: cambiar status a SUSPENDED
+    const { data, error } = await supabaseAdmin
+      .from('businesses')
+      .update({ status: 'SUSPENDED', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
 
-    // Soft delete: cambiar status a SUSPENDED en vez de eliminar
-    // TODO: Actualizar en Supabase
-    // const { data, error } = await supabaseAdmin
-    //   .from('businesses')
-    //   .update({ status: 'SUSPENDED', updated_at: new Date().toISOString() })
-    //   .eq('id', id)
-    //   .select()
-    //   .single();
-
-    console.log(`[Businesses] DELETE /${id} - Comercio suspendido (soft delete)`);
-    void supabaseAdmin;
+    if (error) throw error;
 
     return NextResponse.json<ApiResponse>(
       {
         success: true,
         message: 'Comercio suspendido exitosamente',
-        data: { id, status: 'SUSPENDED', updated_at: new Date().toISOString() },
+        data,
       },
       { status: 200 }
     );
