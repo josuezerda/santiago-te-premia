@@ -192,10 +192,6 @@ export default function BeneficiosPage() {
               }}>
                 {/* Left Info */}
                 <div style={{ flex: 1, minWidth: '280px' }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '12px' }}>
                     {beneficio.image_url && (
                       <img src={beneficio.image_url} alt={beneficio.title} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
