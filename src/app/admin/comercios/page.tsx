@@ -22,35 +22,92 @@ export default function ComerciosPage() {
   const [showModal, setShowModal] = useState(false);
   const [comerciosData, setComerciosData] = useState<Comercio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dbCategories, setDbCategories] = useState<{id: string, name: string}[]>([]);
+  const [formSaving, setFormSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    category_id: '',
+    benefit_percentage: '',
+    address: '',
+    phone: '',
+    user_email: '',
+    user_password: '',
+  });
+
+  async function fetchBusinesses() {
+    const { data, error } = await supabase
+      .from('businesses')
+      .select(`
+        id, name, address, benefit_percentage, status, logo_url,
+        categories ( name )
+      `);
+
+    if (error) {
+      console.error('Error fetching businesses:', error);
+    } else if (data) {
+      const mapped: Comercio[] = data.map((b: any) => ({
+        id: b.id,
+        name: b.name,
+        category: b.categories?.name || 'Otro',
+        address: b.address,
+        discount: b.benefit_percentage > 0 ? `${b.benefit_percentage}%` : 'Beneficio',
+        status: b.status.toLowerCase() as any,
+        image: b.logo_url || undefined,
+        canjes: 0,
+      }));
+      setComerciosData(mapped);
+    }
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function fetchData() {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select(`
-          id, name, address, benefit_percentage, status, logo_url,
-          categories ( name )
-        `);
-
-      if (error) {
-        console.error('Error fetching businesses:', error);
-      } else if (data) {
-        const mapped: Comercio[] = data.map((b: any) => ({
-          id: b.id,
-          name: b.name,
-          category: b.categories?.name || 'Otro',
-          address: b.address,
-          discount: b.benefit_percentage > 0 ? `${b.benefit_percentage}%` : 'Beneficio',
-          status: b.status.toLowerCase() as any,
-          image: b.logo_url || undefined,
-          canjes: 0, // Placeholder
-        }));
-        setComerciosData(mapped);
-      }
-      setLoading(false);
+    fetchBusinesses();
+    // Cargar categorías reales de la DB
+    async function fetchCategories() {
+      const { data } = await supabase.from('categories').select('id, name').order('name');
+      if (data) setDbCategories(data);
     }
-    fetchData();
+    fetchCategories();
   }, []);
+
+  const handleCreateBusiness = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    setFormSaving(true);
+
+    try {
+      const res = await fetch('/api/businesses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          category_id: formData.category_id,
+          benefit_percentage: Number(formData.benefit_percentage) || 0,
+          address: formData.address,
+          phone: formData.phone,
+          user_email: formData.user_email,
+          user_password: formData.user_password,
+          user_name: formData.name,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        alert(`✅ ${data.message}`);
+        setShowModal(false);
+        setFormData({ name: '', category_id: '', benefit_percentage: '', address: '', phone: '', user_email: '', user_password: '' });
+        // Recargar la lista
+        fetchBusinesses();
+      } else {
+        setFormError(data.error || 'Error al crear el comercio');
+      }
+    } catch (err) {
+      setFormError('Error de conexión');
+    }
+    setFormSaving(false);
+  };
 
   const filtered = comerciosData.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
@@ -233,7 +290,7 @@ export default function ComerciosPage() {
       {/* New Comercio Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h2 style={{ fontSize: '1.3rem', fontWeight: 600 }}>Nuevo Comercio</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>
@@ -241,67 +298,76 @@ export default function ComerciosPage() {
               </button>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); setShowModal(false); }}>
+            <form onSubmit={handleCreateBusiness}>
               <div className="form-group">
-                <label className="form-label">Nombre del Comercio</label>
-                <input className="form-input" placeholder="Ej: Café del Centro" />
+                <label className="form-label">Nombre del Comercio *</label>
+                <input className="form-input" placeholder="Ej: Café del Centro" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label className="form-label">Categoría</label>
-                  <select className="form-input">
-                    <option>Gastronomía</option>
-                    <option>Indumentaria</option>
-                    <option>Artesanías</option>
-                    <option>Salud</option>
-                    <option>Librería</option>
-                    <option>Otro</option>
+                  <label className="form-label">Categoría *</label>
+                  <select className="form-input" value={formData.category_id} onChange={(e) => setFormData({...formData, category_id: e.target.value})} required>
+                    <option value="">Seleccioná una categoría</option>
+                    {dbCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Descuento</label>
-                  <input className="form-input" placeholder="Ej: 15%" />
+                  <label className="form-label">Descuento (%)</label>
+                  <input className="form-input" type="number" placeholder="Ej: 15" value={formData.benefit_percentage} onChange={(e) => setFormData({...formData, benefit_percentage: e.target.value})} />
                 </div>
               </div>
 
               <div className="form-group">
                 <label className="form-label">Dirección</label>
-                <input className="form-input" placeholder="Ej: Av. Belgrano 345" />
+                <input className="form-input" placeholder="Ej: Av. Belgrano 345" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Email de Contacto</label>
-                <input className="form-input" type="email" placeholder="contacto@comercio.com" />
+                <label className="form-label">Teléfono / WhatsApp</label>
+                <input className="form-input" placeholder="+54 385 ..." value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Teléfono</label>
-                <input className="form-input" placeholder="+54 385 ..." />
+              {/* Separador: Acceso al Dashboard */}
+              <div style={{
+                borderTop: '1px solid var(--border-color)',
+                marginTop: '24px',
+                paddingTop: '20px',
+                marginBottom: '16px',
+              }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '4px' }}>
+                  🔑 Acceso al Dashboard del Comercio
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '16px' }}>
+                  Estas credenciales le permitirán al comercio ingresar a su panel para validar PINs y gestionar sus beneficios.
+                </p>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Logo / Imagen</label>
-                <div style={{
-                  border: '2px dashed var(--border-color)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '32px',
-                  textAlign: 'center',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  transition: 'var(--transition)',
-                }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>📷</div>
-                  <p style={{ fontSize: '0.85rem' }}>Hacé click o arrastrá una imagen aquí</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">Email de acceso *</label>
+                  <input className="form-input" type="email" placeholder="comercio@email.com" value={formData.user_email} onChange={(e) => setFormData({...formData, user_email: e.target.value})} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Contraseña *</label>
+                  <input className="form-input" type="text" placeholder="Contraseña inicial" value={formData.user_password} onChange={(e) => setFormData({...formData, user_password: e.target.value})} required />
                 </div>
               </div>
+
+              {formError && (
+                <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-md)', color: 'var(--error)', fontSize: '0.85rem', marginBottom: '16px' }}>
+                  {formError}
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
                 <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Crear Comercio
+                <button type="submit" className="btn btn-primary" disabled={formSaving}>
+                  {formSaving ? '⏳ Creando...' : '✅ Crear Comercio + Usuario'}
                 </button>
               </div>
             </form>

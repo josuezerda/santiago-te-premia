@@ -16,14 +16,37 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
       setLoading(false);
-      if (email.includes('admin')) {
-        router.push('/admin');
+
+      if (res.ok && data.success) {
+        // Guardar sesión en localStorage
+        localStorage.setItem('stp_token', data.data.token);
+        localStorage.setItem('stp_user', JSON.stringify(data.data.user));
+        if (data.data.business) {
+          localStorage.setItem('stp_business', JSON.stringify(data.data.business));
+        }
+
+        // Redirigir según el rol
+        if (data.data.user.role === 'SUPER_ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
-        router.push('/dashboard');
+        setError(data.error || 'Credenciales inválidas');
       }
-    }, 1200);
+    } catch (err) {
+      setLoading(false);
+      setError('Error de conexión con el servidor');
+    }
   };
 
   return (
