@@ -100,21 +100,20 @@ export default function BeneficiosPage() {
 
     setUploadingImage(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `promotions/${fileName}`;
+      const formData = new FormData();
+      formData.append('file', file);
 
-      const { error: uploadError } = await supabase.storage
-        .from('images')
-        .upload(filePath, file);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-      if (uploadError) {
-        throw uploadError;
+      if (!response.ok) {
+        throw new Error('Upload failed');
       }
 
-      const { data } = supabase.storage.from('images').getPublicUrl(filePath);
-      
-      setFormData(prev => ({ ...prev, image_url: data.publicUrl }));
+      const result = await response.json();
+      setFormData(prev => ({ ...prev, image_url: result.url }));
     } catch (error) {
       console.error('Error al subir imagen:', error);
       alert('Error al subir la imagen. Asegurate de que pese menos de 10MB.');
