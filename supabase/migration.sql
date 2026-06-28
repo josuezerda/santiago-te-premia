@@ -321,3 +321,16 @@ VALUES (
   'BUSINESS',
   (SELECT id FROM businesses WHERE name = 'Marybe' LIMIT 1)
 );
+
+-- ---- reservations --------------------------------------------------------
+CREATE TABLE reservations (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tourist_id     UUID NOT NULL REFERENCES tourists(id) ON DELETE CASCADE,
+  promotion_id   UUID NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
+  business_id    UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  status         TEXT NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, COMPLETED, EXPIRED
+  expires_at     TIMESTAMPTZ NOT NULL,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+

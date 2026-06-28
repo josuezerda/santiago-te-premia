@@ -13,6 +13,7 @@ interface Beneficio {
   uses: number;
   active: boolean;
   image_url: string;
+  max_uses?: number;
 }
 
 const typeBadgeMap: Record<string, { label: string; badge: string }> = {
@@ -36,7 +37,8 @@ export default function BeneficiosPage() {
     conditions: '',
     start_date: '',
     end_date: '',
-    image_url: ''
+    image_url: '',
+    max_uses: ''
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [formSaving, setFormSaving] = useState(false);
@@ -79,6 +81,7 @@ export default function BeneficiosPage() {
         uses: b.current_uses || 0,
         active: b.is_active,
         image_url: b.description || '', // Usamos description para guardar la URL de la imagen
+        max_uses: b.max_uses,
       }));
       setBeneficios(mapped);
     }
@@ -136,12 +139,13 @@ export default function BeneficiosPage() {
       start_date: formData.start_date ? new Date(formData.start_date).toISOString() : null,
       end_date: formData.end_date ? new Date(formData.end_date).toISOString() : null,
       is_active: true,
-      description: formData.image_url // Guardamos la URL en description
+      description: formData.image_url, // Guardamos la URL en description
+      max_uses: formData.max_uses ? Number(formData.max_uses) : null
     });
 
     if (!error) {
       setShowModal(false);
-      setFormData({ title: '', type: 'PERCENTAGE', discount_value: '', conditions: '', start_date: '', end_date: '', image_url: '' });
+      setFormData({ title: '', type: 'PERCENTAGE', discount_value: '', conditions: '', start_date: '', end_date: '', image_url: '', max_uses: '' });
       fetchBeneficios();
     } else {
       alert('Error al crear promoción');
@@ -214,9 +218,16 @@ export default function BeneficiosPage() {
                     gap: '24px',
                     fontSize: '0.85rem',
                     color: 'var(--text-secondary)',
+                    marginTop: '12px',
+                    flexWrap: 'wrap'
                   }}>
                     <span>📅 {beneficio.validFrom} — {beneficio.validTo}</span>
                     <span>🔄 {beneficio.uses} canjes</span>
+                    {beneficio.max_uses !== null && beneficio.max_uses !== undefined && (
+                      <span style={{ color: (beneficio.max_uses - beneficio.uses) <= 0 ? 'var(--error)' : 'inherit' }}>
+                        📦 Stock: {beneficio.max_uses - beneficio.uses} / {beneficio.max_uses}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -302,9 +313,15 @@ export default function BeneficiosPage() {
                 <textarea className="form-input" required rows={3} placeholder="Ej: Válido solo pago en efectivo. No acumulable." value={formData.conditions} onChange={e => setFormData({...formData, conditions: e.target.value})} />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Imagen del Producto (Opcional)</label>
-                {formData.image_url ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">Stock (Límite de usos)</label>
+                  <input className="form-input" type="number" placeholder="Ej: 50 (Vacio = Sin límite)" value={formData.max_uses} onChange={e => setFormData({...formData, max_uses: e.target.value})} />
+                </div>
+                
+                <div className="form-group">
+                  <label className="form-label">Imagen del Producto (Opcional)</label>
+                  {formData.image_url ? (
                   <div style={{ marginBottom: '10px', position: 'relative', display: 'inline-block' }}>
                     <img src={formData.image_url} alt="Vista previa" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px' }} />
                     <button type="button" onClick={() => setFormData({...formData, image_url: ''})} style={{ position: 'absolute', top: '-10px', right: '-10px', background: 'var(--error)', color: 'white', borderRadius: '50%', width: '24px', height: '24px', border: 'none', cursor: 'pointer' }}>✕</button>
@@ -313,6 +330,7 @@ export default function BeneficiosPage() {
                   <input type="file" accept="image/*" className="form-input" onChange={handleImageUpload} disabled={uploadingImage} style={{ padding: '8px' }} />
                 )}
                 {uploadingImage && <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Subiendo imagen...</p>}
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
