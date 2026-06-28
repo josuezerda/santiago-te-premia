@@ -1,7 +1,10 @@
+'use client';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState } from 'react';
 
 export default function Home() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const steps = [
     {
       num: '01',
@@ -32,30 +35,65 @@ export default function Home() {
   return (
     <div style={{ minHeight: '100vh' }}>
       {/* Public Header */}
-      <header className="header">
+      <header className="header" style={{ position: 'relative', zIndex: 50 }}>
         <div className="container header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Image
               src="/logo-camara.png"
               alt="Cámara de Comercio"
               width={300}
               height={150}
-              style={{ width: 'auto', height: '45px', objectFit: 'contain' }}
+              style={{ width: 'auto', height: '40px', objectFit: 'contain' }}
             />
-            <span className="logo desktop-only">Santiago te Premia</span>
+            <span className="logo" style={{ fontSize: '1.2rem', whiteSpace: 'nowrap' }}>Santiago te Premia</span>
           </div>
-          <nav style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <a href="#como-funciona" className="desktop-only" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
+          
+          {/* Desktop Nav */}
+          <nav className="desktop-only" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <a href="#como-funciona" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
               ¿Cómo funciona?
             </a>
-            <a href="#comercios" className="desktop-only" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
+            <a href="#comercios" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
               Comercios
             </a>
-            <Link href="/login" className="btn btn-primary btn-sm-mobile">
+            <a href="https://wa.me/5493850000000" target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ borderColor: 'var(--success)', color: 'var(--success)' }}>
+              Registrarte
+            </a>
+            <Link href="/login" className="btn btn-primary">
               Ingresar
             </Link>
           </nav>
+
+          {/* Mobile Nav Toggle */}
+          <div className="mobile-only" style={{ display: 'flex', alignItems: 'center' }}>
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              style={{ background: 'none', border: 'none', fontSize: '1.8rem', cursor: 'pointer', color: 'var(--text-primary)', padding: '4px' }}
+            >
+              {isMenuOpen ? '✕' : '☰'}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {isMenuOpen && (
+          <div className="mobile-only" style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', padding: '20px', boxShadow: 'var(--shadow-md)', flexDirection: 'column', gap: '16px', zIndex: 60 }}>
+            <a href="#como-funciona" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 500, padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              ¿Cómo funciona?
+            </a>
+            <a href="#comercios" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 500, padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              Comercios
+            </a>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+              <a href="https://wa.me/5493850000000" target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)} className="btn btn-outline" style={{ borderColor: 'var(--success)', color: 'var(--success)', justifyContent: 'center', width: '100%' }}>
+                Registrarte vía WhatsApp
+              </a>
+              <Link href="/login" onClick={() => setIsMenuOpen(false)} className="btn btn-primary" style={{ justifyContent: 'center', width: '100%' }}>
+                Ingresar al panel
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
