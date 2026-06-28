@@ -134,62 +134,48 @@ export default function Home() {
 
       {/* How It Works */}
       <section id="como-funciona" style={{ padding: '80px 20px', background: 'var(--bg-secondary)' }}>
-        <div className="container">
-          <h2 style={{
-            fontSize: '2rem',
-            fontWeight: 700,
-            textAlign: 'center',
-            marginBottom: '12px',
-          }}>
-            ¿Cómo funciona?
+        <div className="container" style={{ maxWidth: '800px', margin: '0 auto' }}>
+          
+          <h2 style={{ fontSize: '2.5rem', fontWeight: 700, textAlign: 'center', marginBottom: '48px' }}>
+            Sobre el Programa
           </h2>
-          <p style={{
-            textAlign: 'center',
-            color: 'var(--text-secondary)',
-            marginBottom: '48px',
-            maxWidth: '500px',
-            margin: '0 auto 48px',
-          }}>
-            En solo 4 pasos comenzá a disfrutar de los beneficios exclusivos para turistas.
-          </p>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '24px',
-            maxWidth: '1000px',
-            margin: '0 auto',
-          }}>
-            {steps.map((step) => (
-              <div key={step.num} className="card" style={{
-                textAlign: 'center',
-                padding: '32px 24px',
-                position: 'relative',
-              }}>
-                <div style={{
-                  fontSize: '2.5rem',
-                  marginBottom: '16px',
-                }}>
-                  {step.icon}
-                </div>
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--accent-primary)',
-                  fontWeight: 700,
-                  letterSpacing: '2px',
-                  marginBottom: '8px',
-                }}>
-                  PASO {step.num}
-                </div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '8px' }}>
-                  {step.title}
-                </h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                  {step.desc}
-                </p>
-              </div>
-            ))}
+          {/* 1. ¿Qué es Santiago Te Premia? */}
+          <div style={{ marginBottom: '40px', background: 'white', padding: '40px', borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ background: '#64748b', color: 'white', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>1</span>
+              ¿Qué es Santiago Te Premia?
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', lineHeight: 1.7, margin: 0 }}>
+              Es una plataforma diseñada para incentivar el turismo y comercio local. Permite a los turistas acceder a beneficios exclusivos en locales adheridos de Santiago del Estero, utilizando un sistema seguro de registro por WhatsApp y validación mediante PIN en la caja.
+            </p>
           </div>
+
+          {/* 2. La experiencia del Turista (Paso a Paso) */}
+          <div style={{ background: 'white', padding: '40px', borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ background: '#64748b', color: 'white', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>2</span>
+              La experiencia del Turista (Paso a Paso)
+            </h3>
+            <ol style={{ paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '20px', color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: 1.6 }}>
+              <li style={{ paddingLeft: '8px' }}>
+                <strong style={{ color: '#1e293b' }}>Registro Inicial:</strong> El turista envía un mensaje de WhatsApp a nuestro bot oficial. El bot le pide sus datos básicos (Nombre, Provincia) y le solicita que cree un <strong>PIN de Seguridad de 4 dígitos</strong>. Este PIN es como su "tarjeta de descuento" virtual y no debe olvidarlo.
+              </li>
+              <li style={{ paddingLeft: '8px' }}>
+                <strong style={{ color: '#1e293b' }}>Acceso al Catálogo:</strong> A través de WhatsApp, el turista recibe un enlace único para abrir el <em>Catálogo Dinámico</em>.
+              </li>
+              <li style={{ paddingLeft: '8px' }}>
+                <strong style={{ color: '#1e293b' }}>Reservar un Beneficio:</strong> Dentro del catálogo, el turista puede ver todas las promociones activas. Al elegir una, toca en "Reservar". El sistema restará `1` del stock de ese comercio y le generará al turista un <em>Voucher con una cuenta regresiva de 1 hora</em>.
+              </li>
+              <li style={{ paddingLeft: '8px' }}>
+                <strong style={{ color: '#1e293b' }}>Ir al Comercio:</strong> El turista tiene exactamente 1 hora para presentarse en el local. Si no va, la reserva se cancela y el producto vuelve al stock del negocio para otro turista.
+              </li>
+              <li style={{ paddingLeft: '8px' }}>
+                <strong style={{ color: '#1e293b' }}>Canje:</strong> Una vez en la caja, el turista solo debe decirle al vendedor: <em>"Tengo una reserva en Santiago Te Premia, mi PIN es 1-2-3-4"</em>.
+              </li>
+            </ol>
+          </div>
+
         </div>
       </section>
 
