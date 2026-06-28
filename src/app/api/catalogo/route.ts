@@ -56,11 +56,14 @@ export async function GET() {
         })
         .filter(p => p.stock === null || p.stock > 0); // Only return promos with stock > 0
 
+      const categoryData = biz.categories as any;
+      const categoryName = Array.isArray(categoryData) ? categoryData[0]?.name : categoryData?.name;
+
       return {
         id: biz.id,
         name: biz.name,
         logo: biz.logo_url,
-        category: biz.categories?.name || 'General',
+        category: categoryName || 'General',
         promotions: bizPromos
       };
     }).filter(biz => biz.promotions.length > 0); // Only return businesses with active promos
