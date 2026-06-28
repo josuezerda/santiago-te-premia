@@ -117,7 +117,7 @@ export default function BeneficiosPage() {
       setFormData(prev => ({ ...prev, image_url: data.publicUrl }));
     } catch (error) {
       console.error('Error al subir imagen:', error);
-      alert('Error al subir la imagen. Asegurate de que pese menos de 2MB.');
+      alert('Error al subir la imagen. Asegurate de que pese menos de 10MB.');
     } finally {
       setUploadingImage(false);
     }
