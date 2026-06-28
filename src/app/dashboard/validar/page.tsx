@@ -19,6 +19,7 @@ export default function ValidarPinPage() {
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [touristInfo, setTouristInfo] = useState<any>(null);
   const [availableBenefits, setAvailableBenefits] = useState<Benefit[]>([]);
+  const [activeReservation, setActiveReservation] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   // Para el MVP, obtenemos el ID del comercio Marybe
@@ -73,6 +74,10 @@ export default function ValidarPinPage() {
       if (res.ok && data.success) {
         setTouristInfo(data.tourist);
         setAvailableBenefits(data.availableBenefits);
+        if (data.activeReservation) {
+          setActiveReservation(data.activeReservation);
+          setSelectedBenefit(data.activeReservation.promotion_id);
+        }
         setStatus('success');
       } else {
         setErrorMessage(data.error || 'PIN inválido');
@@ -95,7 +100,8 @@ export default function ValidarPinPage() {
           touristId: touristInfo.id,
           promotionId: selectedBenefit,
           businessId: businessId,
-          pin: pin.join('')
+          pin: pin.join(''),
+          reservationId: activeReservation ? activeReservation.id : undefined
         })
       });
       
@@ -113,6 +119,7 @@ export default function ValidarPinPage() {
     setPin(['', '', '', '', '', '']);
     setStatus('idle');
     setSelectedBenefit(null);
+    setActiveReservation(null);
     setConfirmed(false);
     setTouristInfo(null);
     setTimeout(() => inputRefs.current[0]?.focus(), 100);
@@ -281,9 +288,24 @@ export default function ValidarPinPage() {
           </div>
 
           {/* Selectable Benefits */}
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '12px' }}>
-            Seleccioná el beneficio a canjear:
-          </h3>
+          {activeReservation ? (
+            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(16, 185, 129, 0.1)', border: '2px solid var(--success)', borderRadius: 'var(--radius-lg)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>⏱️</span>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--success)' }}>
+                  Reserva Activa Encontrada
+                </h3>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+                Este turista ya seleccionó su beneficio desde el catálogo. Hacé clic en Confirmar para completar el canje.
+              </p>
+            </div>
+          ) : (
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '12px' }}>
+              Seleccioná el beneficio a canjear:
+            </h3>
+          )}
+
           {availableBenefits.length === 0 ? (
             <p style={{ color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '20px' }}>
               No hay beneficios activos cargados para tu comercio.
@@ -293,13 +315,13 @@ export default function ValidarPinPage() {
               {availableBenefits.map((b) => (
                 <div
                   key={b.id}
-                  onClick={() => setSelectedBenefit(b.id)}
+                  onClick={() => !activeReservation && setSelectedBenefit(b.id)}
                   style={{
                     padding: '16px',
                     background: selectedBenefit === b.id ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-secondary)',
-                    border: `2px solid ${selectedBenefit === b.id ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                    border: `2px solid ${selectedBenefit === b.id ? (activeReservation ? 'var(--success)' : 'var(--accent-primary)') : 'var(--border-color)'}`,
                     borderRadius: 'var(--radius-lg)',
-                    cursor: 'pointer',
+                    cursor: activeReservation ? 'default' : 'pointer',
                     transition: 'var(--transition)',
                     display: 'flex',
                     justifyContent: 'space-between',

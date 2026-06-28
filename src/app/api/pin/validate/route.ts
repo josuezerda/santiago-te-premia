@@ -57,6 +57,22 @@ export async function POST(request: Request) {
       if (benefits) availableBenefits = benefits;
     }
 
+    // Buscamos si el turista tiene una reserva activa en este comercio
+    let activeReservation = null;
+    if (businessId) {
+      const { data: res } = await supabaseAdmin
+        .from('reservations')
+        .select('id, promotion_id, expires_at')
+        .eq('tourist_id', matchedTourist.id)
+        .eq('business_id', businessId)
+        .eq('status', 'ACTIVE')
+        .gt('expires_at', new Date().toISOString())
+        .limit(1)
+        .single();
+        
+      if (res) activeReservation = res;
+    }
+
     return NextResponse.json({
       success: true,
       tourist: {
@@ -66,6 +82,7 @@ export async function POST(request: Request) {
         hotel: hotelName,
       },
       availableBenefits,
+      activeReservation
     });
 
   } catch (err: any) {

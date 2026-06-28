@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
-    const { touristId, promotionId, businessId, pin } = await request.json();
+    const { touristId, promotionId, businessId, pin, reservationId } = await request.json();
 
     if (!touristId || !promotionId || !businessId || !pin) {
       return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 });
@@ -50,8 +50,16 @@ export async function POST(request: Request) {
     if (promo) {
       await supabaseAdmin
         .from('promotions')
-        .update({ current_uses: promo.current_uses + 1 })
+        .update({ current_uses: (promo.current_uses || 0) + 1 })
         .eq('id', promotionId);
+    }
+    
+    // Si había una reserva, la marcamos como completada
+    if (reservationId) {
+      await supabaseAdmin
+        .from('reservations')
+        .update({ status: 'COMPLETED' })
+        .eq('id', reservationId);
     }
 
     return NextResponse.json({ success: true });
