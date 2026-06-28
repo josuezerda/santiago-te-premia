@@ -11,7 +11,7 @@ interface PuntoQR {
   qrCode: string;
 }
 
-const puntosData: PuntoQR[] = [
+const initialPuntosData: PuntoQR[] = [
   { id: 1, name: 'Hotel NH', type: 'Hotel', address: 'Av. Moreno 123', registros: 342, status: 'active', qrCode: 'NH-001' },
   { id: 2, name: 'Hotel Carlos V', type: 'Hotel', address: 'Libertad 456', registros: 278, status: 'active', qrCode: 'CV-002' },
   { id: 3, name: 'Hotel Savoy', type: 'Hotel', address: 'Av. Belgrano 789', registros: 195, status: 'active', qrCode: 'SV-003' },
@@ -23,13 +23,23 @@ const puntosData: PuntoQR[] = [
 ];
 
 export default function HotelesPage() {
+  const [puntos, setPuntos] = useState(initialPuntosData);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showQrModal, setShowQrModal] = useState<PuntoQR | null>(null);
   const [selectedType, setSelectedType] = useState('Todos');
+  const [editPoint, setEditPoint] = useState<PuntoQR | null>(null);
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'Hotel',
+    address: '',
+    contact: ''
+  });
 
   const types = ['Todos', 'Hotel', 'Punto Turístico', 'Comercio'];
 
-  const filtered = puntosData.filter((p) => {
+  const filtered = puntos.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
     const matchType = selectedType === 'Todos' || p.type === selectedType;
     return matchSearch && matchType;
@@ -39,6 +49,42 @@ export default function HotelesPage() {
     'Hotel': 'badge-accent',
     'Punto Turístico': 'badge-success',
     'Comercio': 'badge-warning',
+  };
+
+  const handleOpenEdit = (punto: PuntoQR) => {
+    setEditPoint(punto);
+    setFormData({
+      name: punto.name,
+      type: punto.type,
+      address: punto.address,
+      contact: ''
+    });
+    setShowModal(true);
+  };
+
+  const handleOpenNew = () => {
+    setEditPoint(null);
+    setFormData({ name: '', type: 'Hotel', address: '', contact: '' });
+    setShowModal(true);
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editPoint) {
+      setPuntos(puntos.map(p => p.id === editPoint.id ? { ...p, name: formData.name, type: formData.type as any, address: formData.address } : p));
+    } else {
+      const newPunto: PuntoQR = {
+        id: Date.now(),
+        name: formData.name,
+        type: formData.type as any,
+        address: formData.address,
+        registros: 0,
+        status: 'active',
+        qrCode: `QR-${Math.floor(Math.random() * 1000)}`
+      };
+      setPuntos([newPunto, ...puntos]);
+    }
+    setShowModal(false);
   };
 
   return (
@@ -52,7 +98,7 @@ export default function HotelesPage() {
             Gestión de hoteles, puntos turísticos y códigos QR de registro
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={handleOpenNew}>
           + Nuevo Punto QR
         </button>
       </div>
@@ -158,8 +204,8 @@ export default function HotelesPage() {
                 </td>
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="btn btn-outline btn-sm">📋 QR</button>
-                    <button className="btn btn-outline btn-sm">✏️</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => setShowQrModal(punto)}>📋 QR</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => handleOpenEdit(punto)}>✏️</button>
                   </div>
                 </td>
               </tr>
@@ -176,44 +222,46 @@ export default function HotelesPage() {
         )}
       </div>
 
-      {/* New Point Modal */}
+      {/* New/Edit Point Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 600 }}>Nuevo Punto QR</h2>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 600 }}>
+                {editPoint ? 'Editar Punto QR' : 'Nuevo Punto QR'}
+              </h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); setShowModal(false); }}>
+            <form onSubmit={handleSave}>
               <div className="form-group">
                 <label className="form-label">Nombre</label>
-                <input className="form-input" placeholder="Ej: Hotel NH Santiago" />
+                <input className="form-input" placeholder="Ej: Hotel NH Santiago" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">Tipo</label>
-                  <select className="form-input">
-                    <option>Hotel</option>
-                    <option>Punto Turístico</option>
-                    <option>Comercio</option>
+                  <select className="form-input" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                    <option value="Hotel">Hotel</option>
+                    <option value="Punto Turístico">Punto Turístico</option>
+                    <option value="Comercio">Comercio</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Código QR</label>
-                  <input className="form-input" placeholder="Auto-generado" disabled />
+                  <input className="form-input" placeholder={editPoint ? editPoint.qrCode : "Auto-generado"} disabled />
                 </div>
               </div>
 
               <div className="form-group">
                 <label className="form-label">Dirección</label>
-                <input className="form-input" placeholder="Dirección del punto" />
+                <input className="form-input" placeholder="Dirección del punto" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} required />
               </div>
 
               <div className="form-group">
                 <label className="form-label">Contacto</label>
-                <input className="form-input" placeholder="Nombre del responsable" />
+                <input className="form-input" placeholder="Nombre del responsable" value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} />
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
@@ -221,10 +269,53 @@ export default function HotelesPage() {
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Crear Punto QR
+                  {editPoint ? 'Guardar Cambios' : 'Crear Punto QR'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Show QR Modal */}
+      {showQrModal && (
+        <div className="modal-overlay" onClick={() => setShowQrModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div className="modal-header" style={{ borderBottom: 'none' }}>
+              <button className="modal-close" onClick={() => setShowQrModal(null)}>✕</button>
+            </div>
+            
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px' }}>
+              {showQrModal.name}
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
+              Los turistas pueden escanear este código para registrarse
+            </p>
+
+            <div style={{
+              background: 'white',
+              padding: '24px',
+              borderRadius: 'var(--radius-lg)',
+              display: 'inline-block',
+              marginBottom: '24px',
+              border: '1px solid var(--border-color)',
+            }}>
+               <div style={{
+                  width: '200px',
+                  height: '200px',
+                  background: `repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 50%/20px 20px`,
+                  borderRadius: '4px',
+                }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button className="btn btn-outline" onClick={() => setShowQrModal(null)}>
+                Cerrar
+              </button>
+              <button className="btn btn-primary">
+                🖨️ Imprimir
+              </button>
+            </div>
           </div>
         </div>
       )}

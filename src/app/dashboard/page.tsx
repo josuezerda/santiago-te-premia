@@ -117,27 +117,31 @@ export default function CommerceDashboard() {
           </button>
         </div>
 
-            </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-              Beneficio: 15% en perfumería · Origen: Buenos Aires
-            </p>
-          </div>
-        )}
-        {validationResult === 'error' && (
+        {validationResult && (
           <div style={{
             marginTop: '16px',
-            padding: '16px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
-            animation: 'shake 0.4s ease-out',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            backgroundColor: validationResult === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            border: `1px solid ${validationResult === 'success' ? 'var(--success)' : 'var(--error)'}`,
+            color: validationResult === 'success' ? 'var(--success)' : 'var(--error)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--error)', fontWeight: 600 }}>
-              ❌ PIN inválido o expirado
+            <span style={{ fontSize: '1.2rem' }}>
+              {validationResult === 'success' ? '✅' : '❌'}
+            </span>
+            <div>
+              <div style={{ fontWeight: 600 }}>
+                {validationResult === 'success' ? 'PIN Válido' : 'PIN Inválido o Expirado'}
+              </div>
+              <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+                {validationResult === 'success'
+                  ? 'El beneficio ha sido canjeado exitosamente.'
+                  : 'Verificá que el código sea correcto. Puede que ya haya sido utilizado.'}
+              </div>
             </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-              Verificá que el PIN esté bien escrito e intentá de nuevo.
-            </p>
           </div>
         )}
       </div>
