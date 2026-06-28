@@ -6,6 +6,7 @@ const tabConfig = [
   { id: 'pin', label: 'PIN Dinámico', icon: '🔢' },
   { id: 'mensajes', label: 'Mensajes', icon: '📝' },
   { id: 'general', label: 'General', icon: '⚙️' },
+  { id: 'accesos', label: 'Accesos', icon: '🔐' },
 ];
 
 export default function ConfiguracionPage() {
@@ -556,6 +557,67 @@ export default function ConfiguracionPage() {
           </div>
         </div>
       )}
+      {/* Accesos Tab */}
+      {activeTab === 'accesos' && (
+        <div style={{ animation: 'fadeIn 0.2s ease-out' }}>
+          <div className="card-static" style={{ maxWidth: '700px' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '8px' }}>
+              Cambiar Datos de Acceso
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+              Actualizá tu correo electrónico o contraseña como Administrador del sistema.
+            </p>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const target = e.target as any;
+              const user = JSON.parse(localStorage.getItem('stp_user') || '{}');
+              const newEmail = target.email.value;
+              const newPassword = target.password.value;
+              
+              if (!newEmail && !newPassword) {
+                alert('Debes completar al menos un campo');
+                return;
+              }
+
+              try {
+                const res = await fetch('/api/auth/update', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: user.id, newEmail, newPassword })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                  alert('Datos actualizados correctamente. Por favor iniciá sesión nuevamente.');
+                  localStorage.removeItem('stp_token');
+                  localStorage.removeItem('stp_user');
+                  window.location.href = '/login';
+                } else {
+                  alert(data.error || 'Error al actualizar');
+                }
+              } catch (err) {
+                alert('Error de conexión');
+              }
+            }}>
+              <div className="form-group">
+                <label className="form-label">Nuevo Correo Electrónico (opcional)</label>
+                <input type="email" name="email" className="form-input" placeholder="Ej: nuevo@correo.com" />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Nueva Contraseña (opcional)</label>
+                <input type="password" name="password" className="form-input" placeholder="********" />
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', maxWidth: '250px' }}>
+                Actualizar Datos
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
