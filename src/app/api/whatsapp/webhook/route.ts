@@ -96,10 +96,10 @@ async function sendTouristMenu(to: string, name: string, token: string, phoneId:
     `¡Hola${name ? ', ' + name : ''}! ¿Qué querés hacer?`,
     [
       { id: 'mi_pin', title: '🔑 Mi PIN' },
-      { id: 'beneficios', title: '🎁 Beneficios' },
-      { id: 'comercios', title: '🏪 Comercios' },
+      { id: 'catalogo', title: '🛍️ Catálogo' },
+      { id: 'preguntas', title: '❓ Ayuda / FAQ' },
     ], token, phoneId);
-  await sendText(to, 'También podés escribir:\n• *AYUDA* - Para obtener información del programa', token, phoneId);
+  await sendText(to, 'Seleccioná una de las opciones arriba.', token, phoneId);
 }
 
 // ============================================================
@@ -472,77 +472,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    // --- BENEFICIOS ---
-    if (lower === 'beneficios' || lower === '2') {
-      const { data: promos } = await supabaseAdmin
-        .from('promotions')
-        .select('title, type, discount_value, conditions, businesses ( name )')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(10);
+    // --- CATÁLOGO ---
+    if (lower === 'catalogo' || lower === 'catálogo' || lower === 'beneficios' || lower === 'comercios') {
+      const { data: tourist } = await supabaseAdmin
+        .from('tourists').select('id, name').eq('phone', from).single();
 
-      let txt = '🎁 *Beneficios disponibles:*\n\n';
-      if (promos && promos.length > 0) {
-        promos.forEach((p: any, i) => {
-          txt += `${i + 1}️⃣ *${p.title}*\n   📍 ${p.businesses?.name || 'Comercio'}\n`;
-          if (p.conditions) txt += `   ${p.conditions}\n`;
-          txt += '\n';
-        });
-      } else {
-        txt += 'No hay beneficios activos en este momento.\n\n';
+      if (!tourist) {
+        await sendText(from, '❌ No estás registrado como turista.', config.token, config.phoneId);
+        return NextResponse.json({ success: true }, { status: 200 });
       }
-      txt += 'Para usar estos beneficios, tocá *Mi PIN* y mostralo en el comercio.';
-      await sendText(from, txt, config.token, config.phoneId);
-      return NextResponse.json({ success: true }, { status: 200 });
-    }
 
-    // --- COMERCIOS ---
-    if (lower === 'comercios' || lower === '1') {
-      const { data: businesses } = await supabaseAdmin
-        .from('businesses')
-        .select('name, address, benefit_percentage, categories ( name )')
-        .eq('status', 'ACTIVE')
-        .order('name');
+      // Generate JWT for catalog
+      const { createTouristToken } = require('@/lib/jwt');
+      const token = await createTouristToken(tourist.id, tourist.name);
+      
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://santiagotepremia.vercel.app';
+      const link = `${baseUrl}/catalogo?token=${token}`;
 
-      let txt = '🏪 *Comercios adheridos:*\n\n';
-      if (businesses && businesses.length > 0) {
-        const byCategory: Record<string, any[]> = {};
-        for (const b of businesses) {
-          const cat = (b as any).categories?.name || 'Otro';
-          if (!byCategory[cat]) byCategory[cat] = [];
-          byCategory[cat].push(b);
-        }
-        for (const [cat, items] of Object.entries(byCategory)) {
-          txt += `📂 *${cat}*\n`;
-          for (const item of items) {
-            txt += `   • ${item.name}`;
-            if (item.benefit_percentage > 0) txt += ` (${item.benefit_percentage}% dto)`;
-            txt += '\n';
-          }
-          txt += '\n';
-        }
-      } else {
-        txt += 'Todavía no hay comercios adheridos.\n';
-      }
-      txt += 'Tocá *Mi PIN* y mostralo en cualquiera de estos comercios.';
-      await sendText(from, txt, config.token, config.phoneId);
-      return NextResponse.json({ success: true }, { status: 200 });
-    }
-
-    // --- AYUDA ---
-    if (lower === 'ayuda' || lower === 'help' || lower === '4') {
       await sendText(from,
-        `ℹ️ *Ayuda - Santiago te Premia*\n\n` +
-        `*¿Qué es Santiago te Premia?*\n` +
-        `Un programa de beneficios para turistas que visitan Santiago del Estero.\n\n` +
-        `*¿Cómo funciona?*\n` +
-        `1️⃣ Escaneá el QR en tu hotel\n` +
-        `2️⃣ Registrate con tus datos\n` +
-        `3️⃣ Tocá *Mi PIN* para obtener tu código\n` +
-        `4️⃣ Mostrá el PIN en el comercio\n` +
-        `5️⃣ ¡Disfrutá los descuentos!\n\n` +
-        `📧 turismo@camaracomerciosde.gob.ar`,
+        `🛍️ *Catálogo de Beneficios*\n\n` +
+        `¡Hola ${tourist.name}! Hacé clic en el siguiente enlace para abrir el catálogo, ver los beneficios disponibles y reservar el tuyo.\n\n` +
+        `👉 ${link}\n\n` +
+        `_Nota: Por seguridad, este enlace es válido por 1 hora._`,
         config.token, config.phoneId);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // --- PREGUNTAS FRECUENTES / AYUDA ---
+    if (lower === 'preguntas' || lower === 'ayuda' || lower === 'help' || lower === 'faq') {
+      const faqText = 
+        `❓ *Preguntas Frecuentes - Santiago Te Premia*\n\n` +
+        `*1. ¿Cómo canjeo un producto?*\n` +
+        `Entrá a la opción "Catálogo", buscá el beneficio que más te guste y tocala en "Reservar". Tendrás 1 hora para presentarte en el local. Una vez ahí, decile al vendedor que tenés una reserva y mostrale tu "PIN de Seguridad" (podés verlo en la opción "Mi PIN").\n\n` +
+        `*2. ¿Qué pasa si la reserva expira?*\n` +
+        `Si no vas al local dentro de la hora, la reserva se cancela automáticamente y no se te cobra nada, pero el producto volverá a estar disponible para otros turistas.\n\n` +
+        `*3. ¿Dónde veo mis beneficios canjeados?*\n` +
+        `Dentro del Catálogo, en el menú inferior tenés la sección "Mis Canjes", donde verás todo tu historial.\n\n` +
+        `*4. ¿Me olvidé mi PIN?*\n` +
+        `No te preocupes, tocá la opción "Mi PIN" en este chat o andá a "Mi Perfil" dentro del catálogo y lo vas a poder ver.\n\n` +
+        `📧 turismo@camaracomerciosde.gob.ar`;
+
+      await sendText(from, faqText, config.token, config.phoneId);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 

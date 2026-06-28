@@ -11,6 +11,7 @@ const navLinks = [
   { href: '/dashboard/historial', label: 'Historial de Canjes', icon: '📋' },
   { href: '/dashboard/estadisticas', label: 'Estadísticas', icon: '📈' },
   { href: '/dashboard/config', label: 'Configuración', icon: '⚙️' },
+  { href: '/dashboard/manual', label: 'Manual de Uso', icon: '📖' },
 ];
 
 export default function DashboardLayout({
