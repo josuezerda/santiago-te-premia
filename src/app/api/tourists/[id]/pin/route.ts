@@ -8,39 +8,28 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { getCurrentPin, getTimeRemaining } from '@/lib/pin';
 import type { ApiResponse, PinResponse } from '@/lib/types';
 
-// Mock de secretos por turista para desarrollo
-const mockPinSecrets: Record<string, string> = {
-  tourist_001: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
-  tourist_002: 'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3',
-  tourist_003: 'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4',
-};
-
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
 
-    // TODO: Obtener el pin_secret del turista desde Supabase
-    // const { data: tourist, error } = await supabaseAdmin
-    //   .from('tourists')
-    //   .select('pin_secret')
-    //   .eq('id', id)
-    //   .single();
-    // if (error || !tourist) {
-    //   return NextResponse.json({ success: false, error: 'Turista no encontrado' }, { status: 404 });
-    // }
-    // const pinSecret = tourist.pin_secret;
+    // Obtener el pin_secret del turista desde Supabase
+    const { data: tourist, error } = await supabaseAdmin
+      .from('tourists')
+      .select('pin_secret')
+      .eq('id', id)
+      .single();
 
-    const pinSecret = mockPinSecrets[id];
-
-    if (!pinSecret) {
+    if (error || !tourist) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: 'Turista no encontrado' },
         { status: 404 }
       );
     }
+
+    const pinSecret = tourist.pin_secret;
 
     // Obtener el tiempo de expiración de las variables de entorno
     const expirationSeconds = parseInt(process.env.PIN_EXPIRATION_SECONDS || '20', 10);
@@ -48,9 +37,6 @@ export async function GET(
     // Generar el PIN actual y calcular tiempo restante
     const pin = getCurrentPin(pinSecret, expirationSeconds);
     const expiresInSeconds = getTimeRemaining(expirationSeconds);
-
-    console.log(`[PIN] GET /tourists/${id}/pin - PIN generado: ${pin} (expira en ${expiresInSeconds}s)`);
-    void supabaseAdmin;
 
     return NextResponse.json<ApiResponse<PinResponse>>(
       {

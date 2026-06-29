@@ -1,47 +1,98 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 interface PuntoQR {
-  id: number;
+  id: string;
   name: string;
-  type: 'Hotel' | 'Punto Turístico' | 'Comercio';
+  type: string;
   address: string;
+  qr_identifier: string;
+  description: string;
   registros: number;
-  status: 'active' | 'paused';
-  qrCode: string;
+  created_at: string;
 }
 
-const initialPuntosData: PuntoQR[] = [
-  { id: 1, name: 'Hotel NH', type: 'Hotel', address: 'Av. Moreno 123', registros: 342, status: 'active', qrCode: 'NH-001' },
-  { id: 2, name: 'Hotel Carlos V', type: 'Hotel', address: 'Libertad 456', registros: 278, status: 'active', qrCode: 'CV-002' },
-  { id: 3, name: 'Hotel Savoy', type: 'Hotel', address: 'Av. Belgrano 789', registros: 195, status: 'active', qrCode: 'SV-003' },
-  { id: 4, name: 'Parque Aguirre', type: 'Punto Turístico', address: 'Parque Aguirre s/n', registros: 156, status: 'active', qrCode: 'PA-004' },
-  { id: 5, name: 'Catedral Basílica', type: 'Punto Turístico', address: 'Plaza Libertad', registros: 134, status: 'active', qrCode: 'CB-005' },
-  { id: 6, name: 'Centro Cultural del Bicentenario', type: 'Punto Turístico', address: 'Av. Rivadavia 1050', registros: 89, status: 'paused', qrCode: 'CC-006' },
-  { id: 7, name: 'Termas de Río Hondo (info)', type: 'Punto Turístico', address: 'Terminal de Ómnibus', registros: 67, status: 'active', qrCode: 'TR-007' },
-  { id: 8, name: 'Shopping del Siglo', type: 'Comercio', address: 'Av. Belgrano 1500', registros: 45, status: 'active', qrCode: 'SS-008' },
-];
+const typeMap: Record<string, string> = {
+  'HOTEL': 'Hotel',
+  'TOURIST_SPOT': 'Punto Turístico',
+  'COMMERCE': 'Comercio',
+  'OTHER': 'Otro',
+};
+
+const reverseTypeMap: Record<string, string> = {
+  'Hotel': 'HOTEL',
+  'Punto Turístico': 'TOURIST_SPOT',
+  'Comercio': 'COMMERCE',
+  'Otro': 'OTHER',
+};
 
 export default function HotelesPage() {
-  const [puntos, setPuntos] = useState(initialPuntosData);
+  const [puntos, setPuntos] = useState<PuntoQR[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState<PuntoQR | null>(null);
+  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState('Todos');
   const [editPoint, setEditPoint] = useState<PuntoQR | null>(null);
+  const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
     type: 'Hotel',
     address: '',
-    contact: ''
+    qr_identifier: '',
+    description: '',
   });
 
   const types = ['Todos', 'Hotel', 'Punto Turístico', 'Comercio'];
 
+  // Cargar puntos de interés desde Supabase
+  async function loadPoints() {
+    setLoading(true);
+    const { data: pois, error } = await supabase
+      .from('points_of_interest')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('[Hoteles] Error cargando POIs:', error);
+      setLoading(false);
+      return;
+    }
+
+    // Contar registros (turistas) por POI
+    const { data: tourists } = await supabase
+      .from('tourists')
+      .select('poi_id');
+
+    const countMap: Record<string, number> = {};
+    tourists?.forEach((t: any) => {
+      if (t.poi_id) countMap[t.poi_id] = (countMap[t.poi_id] || 0) + 1;
+    });
+
+    const mapped: PuntoQR[] = (pois || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      type: p.type,
+      address: p.address,
+      qr_identifier: p.qr_identifier,
+      description: p.description || '',
+      registros: countMap[p.id] || 0,
+      created_at: p.created_at,
+    }));
+
+    setPuntos(mapped);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadPoints(); }, []);
+
   const filtered = puntos.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    const matchType = selectedType === 'Todos' || p.type === selectedType;
+    const displayType = typeMap[p.type] || p.type;
+    const matchType = selectedType === 'Todos' || displayType === selectedType;
     return matchSearch && matchType;
   });
 
@@ -55,36 +106,90 @@ export default function HotelesPage() {
     setEditPoint(punto);
     setFormData({
       name: punto.name,
-      type: punto.type,
+      type: typeMap[punto.type] || 'Hotel',
       address: punto.address,
-      contact: ''
+      qr_identifier: punto.qr_identifier,
+      description: punto.description,
     });
     setShowModal(true);
   };
 
   const handleOpenNew = () => {
     setEditPoint(null);
-    setFormData({ name: '', type: 'Hotel', address: '', contact: '' });
+    setFormData({ name: '', type: 'Hotel', address: '', qr_identifier: '', description: '' });
     setShowModal(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+
+    const dbType = reverseTypeMap[formData.type] || 'OTHER';
+
     if (editPoint) {
-      setPuntos(puntos.map(p => p.id === editPoint.id ? { ...p, name: formData.name, type: formData.type as any, address: formData.address } : p));
+      // Actualizar punto existente
+      const { error } = await supabase
+        .from('points_of_interest')
+        .update({
+          name: formData.name,
+          type: dbType,
+          address: formData.address,
+          description: formData.description,
+        })
+        .eq('id', editPoint.id);
+
+      if (error) {
+        alert('Error al actualizar: ' + error.message);
+        setSaving(false);
+        return;
+      }
     } else {
-      const newPunto: PuntoQR = {
-        id: Date.now(),
-        name: formData.name,
-        type: formData.type as any,
-        address: formData.address,
-        registros: 0,
-        status: 'active',
-        qrCode: `QR-${Math.floor(Math.random() * 1000)}`
-      };
-      setPuntos([newPunto, ...puntos]);
+      // Crear nuevo punto
+      if (!formData.qr_identifier.trim()) {
+        alert('El identificador QR es requerido');
+        setSaving(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('points_of_interest')
+        .insert({
+          name: formData.name,
+          type: dbType,
+          address: formData.address,
+          qr_identifier: formData.qr_identifier.toUpperCase().replace(/\s/g, '_'),
+          description: formData.description,
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          alert('Ya existe un punto con ese identificador QR');
+        } else {
+          alert('Error al crear: ' + error.message);
+        }
+        setSaving(false);
+        return;
+      }
     }
+
+    setSaving(false);
     setShowModal(false);
+    loadPoints();
+  };
+
+  const handleShowQr = async (punto: PuntoQR) => {
+    setShowQrModal(punto);
+    setQrImageUrl(null);
+    // Obtener QR generado desde la API
+    try {
+      const res = await fetch(`/api/points-of-interest/${punto.id}/qr?format=json`);
+      if (res.ok) {
+        const data = await res.json();
+        setQrImageUrl(data.data?.qr_data_url || null);
+      }
+    } catch (err) {
+      console.error('[Hoteles] Error obteniendo QR:', err);
+    }
   };
 
   return (
@@ -128,92 +233,67 @@ export default function HotelesPage() {
 
       {/* Table */}
       <div className="card-static">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Dirección</th>
-              <th>Código QR</th>
-              <th>Registros</th>
-              <th>Estado</th>
-              <th style={{ textAlign: 'right' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((punto) => (
-              <tr key={punto.id}>
-                <td style={{ fontWeight: 500 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {punto.type === 'Hotel' ? '🏨' : punto.type === 'Punto Turístico' ? '📍' : '🏪'}
-                    {punto.name}
-                  </div>
-                </td>
-                <td>
-                  <span className={`badge ${typeBadge[punto.type]}`}>{punto.type}</span>
-                </td>
-                <td style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                  {punto.address}
-                </td>
-                <td>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      background: 'white',
-                      borderRadius: 'var(--radius-sm)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.6rem',
-                      color: '#000',
-                      fontFamily: 'monospace',
-                    }}>
-                      <div style={{
-                        width: '28px',
-                        height: '28px',
-                        background: `repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 50%/6px 6px`,
-                        borderRadius: '2px',
-                      }} />
-                    </div>
-                    <code style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-secondary)',
-                      background: 'var(--bg-elevated)',
-                      padding: '2px 8px',
-                      borderRadius: 'var(--radius-sm)',
-                    }}>
-                      {punto.qrCode}
-                    </code>
-                  </div>
-                </td>
-                <td>
-                  <span style={{ fontWeight: 600 }}>{punto.registros}</span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span className={`status-dot ${punto.status}`} />
-                    <span style={{ fontSize: '0.85rem' }}>
-                      {punto.status === 'active' ? 'Activo' : 'Pausado'}
-                    </span>
-                  </div>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="btn btn-outline btn-sm" onClick={() => setShowQrModal(punto)}>📋 QR</button>
-                    <button className="btn btn-outline btn-sm" onClick={() => handleOpenEdit(punto)}>✏️</button>
-                  </div>
-                </td>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+            Cargando puntos...
+          </div>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Dirección</th>
+                <th>Código QR</th>
+                <th>Registros</th>
+                <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((punto) => {
+                const displayType = typeMap[punto.type] || punto.type;
+                return (
+                  <tr key={punto.id}>
+                    <td style={{ fontWeight: 500 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {displayType === 'Hotel' ? '🏨' : displayType === 'Punto Turístico' ? '📍' : '🏪'}
+                        {punto.name}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`badge ${typeBadge[displayType] || 'badge-neutral'}`}>{displayType}</span>
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                      {punto.address}
+                    </td>
+                    <td>
+                      <code style={{
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)',
+                        background: 'var(--bg-elevated)',
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-sm)',
+                      }}>
+                        {punto.qr_identifier}
+                      </code>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 600 }}>{punto.registros}</span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button className="btn btn-outline btn-sm" onClick={() => handleShowQr(punto)}>📋 QR</button>
+                        <button className="btn btn-outline btn-sm" onClick={() => handleOpenEdit(punto)}>✏️</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
 
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div className="empty-state">
             <div className="empty-state-icon">🔍</div>
             <h3 style={{ marginBottom: '8px' }}>No se encontraron puntos QR</h3>
@@ -249,8 +329,16 @@ export default function HotelesPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Código QR</label>
-                  <input className="form-input" placeholder={editPoint ? editPoint.qrCode : "Auto-generado"} disabled />
+                  <label className="form-label">Identificador QR</label>
+                  <input
+                    className="form-input"
+                    placeholder="Ej: HOTEL_NH"
+                    value={formData.qr_identifier}
+                    onChange={e => setFormData({...formData, qr_identifier: e.target.value})}
+                    disabled={!!editPoint}
+                    required={!editPoint}
+                    style={{ textTransform: 'uppercase' }}
+                  />
                 </div>
               </div>
 
@@ -260,16 +348,16 @@ export default function HotelesPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Contacto</label>
-                <input className="form-input" placeholder="Nombre del responsable" value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} />
+                <label className="form-label">Descripción</label>
+                <input className="form-input" placeholder="Descripción breve" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
                 <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  {editPoint ? 'Guardar Cambios' : 'Crear Punto QR'}
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? 'Guardando...' : editPoint ? 'Guardar Cambios' : 'Crear Punto QR'}
                 </button>
               </div>
             </form>
@@ -300,21 +388,28 @@ export default function HotelesPage() {
               marginBottom: '24px',
               border: '1px solid var(--border-color)',
             }}>
-               <div style={{
-                  width: '200px',
-                  height: '200px',
-                  background: `repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 50%/20px 20px`,
-                  borderRadius: '4px',
-                }} />
+              {qrImageUrl ? (
+                <img src={qrImageUrl} alt="QR Code" style={{ width: '200px', height: '200px' }} />
+              ) : (
+                <div style={{ width: '200px', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+                  Generando QR...
+                </div>
+              )}
             </div>
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+              Código: <strong>{showQrModal.qr_identifier}</strong>
+            </p>
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button className="btn btn-outline" onClick={() => setShowQrModal(null)}>
                 Cerrar
               </button>
-              <button className="btn btn-primary">
-                🖨️ Imprimir
-              </button>
+              {qrImageUrl && (
+                <a href={qrImageUrl} download={`qr-${showQrModal.qr_identifier}.png`} className="btn btn-primary">
+                  📥 Descargar
+                </a>
+              )}
             </div>
           </div>
         </div>

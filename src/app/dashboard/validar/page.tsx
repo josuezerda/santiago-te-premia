@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+
 
 interface Benefit {
   id: string;
@@ -22,15 +22,17 @@ export default function ValidarPinPage() {
   const [activeReservation, setActiveReservation] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Para el MVP, obtenemos el ID del comercio Marybe
+  // Obtener el ID del comercio logueado desde localStorage
   useEffect(() => {
-    async function getBusiness() {
-      const { data } = await supabase.from('businesses').select('id').eq('name', 'Marybe').limit(1);
-      if (data && data.length > 0) {
-        setBusinessId(data[0].id);
+    try {
+      const stored = localStorage.getItem('stp_business');
+      if (stored) {
+        const business = JSON.parse(stored);
+        setBusinessId(business.id);
       }
+    } catch (e) {
+      console.error('[ValidarPIN] Error leyendo business de localStorage:', e);
     }
-    getBusiness();
     inputRefs.current[0]?.focus();
   }, []);
 

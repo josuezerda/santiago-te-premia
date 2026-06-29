@@ -18,70 +18,88 @@ export async function GET(
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
 
-    // TODO: Consultas reales a Supabase
-    // --- Total de canjes del comercio ---
-    // const { count: totalRedemptions } = await supabaseAdmin
-    //   .from('redemptions').select('*', { count: 'exact', head: true })
-    //   .eq('business_id', id);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
-    // --- Canjes de hoy ---
-    // const { count: redemptionsToday } = await supabaseAdmin
-    //   .from('redemptions').select('*', { count: 'exact', head: true })
-    //   .eq('business_id', id)
-    //   .gte('created_at', todayISO);
+    // Run independent queries in parallel
+    const [
+      { count: totalRedemptions },
+      { count: redemptionsToday },
+      { count: activePromotions },
+      { data: uniqueTouristsData },
+      { data: recentRedemptions },
+      { data: topPromosRaw },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('redemptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', id),
+      supabaseAdmin
+        .from('redemptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', id)
+        .gte('created_at', todayISO),
+      supabaseAdmin
+        .from('promotions')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', id)
+        .eq('is_active', true),
+      supabaseAdmin
+        .from('redemptions')
+        .select('tourist_id')
+        .eq('business_id', id),
+      supabaseAdmin
+        .from('redemptions')
+        .select('created_at')
+        .eq('business_id', id)
+        .gte('created_at', thirtyDaysAgoISO)
+        .order('created_at', { ascending: true }),
+      supabaseAdmin
+        .from('promotions')
+        .select('id, title, current_uses')
+        .eq('business_id', id)
+        .order('current_uses', { ascending: false })
+        .limit(5),
+    ]);
 
-    // --- Promociones activas ---
-    // const { count: activePromotions } = await supabaseAdmin
-    //   .from('promotions').select('*', { count: 'exact', head: true })
-    //   .eq('business_id', id)
-    //   .eq('active', true);
+    // Unique tourists count
+    const uniqueTourists = new Set(
+      (uniqueTouristsData || []).map((r) => r.tourist_id)
+    ).size;
 
-    // --- Turistas únicos ---
-    // const { data: uniqueTouristsData } = await supabaseAdmin
-    //   .from('redemptions').select('tourist_id')
-    //   .eq('business_id', id);
-    // const uniqueTourists = new Set(uniqueTouristsData?.map(r => r.tourist_id)).size;
-
-    // --- Canjes por día (últimos 30 días) ---
-    // const { data: redemptionsByDay } = await supabaseAdmin
-    //   .rpc('get_redemptions_by_day', { business_id_param: id, days: 30 });
-
-    // --- Top promociones del comercio ---
-    // const { data: topPromotions } = await supabaseAdmin
-    //   .from('promotions')
-    //   .select('id, title, current_uses')
-    //   .eq('business_id', id)
-    //   .order('current_uses', { ascending: false })
-    //   .limit(5);
-
-    // Generar datos mock de canjes por día (últimos 30 días)
-    const redemptionsByDay = [];
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      redemptionsByDay.push({
-        date: date.toISOString().split('T')[0],
-        count: Math.floor(Math.random() * 15) + 1,
-      });
+    // Group redemptions by day (last 30 days)
+    const dayCounts: Record<string, number> = {};
+    for (const r of recentRedemptions || []) {
+      const date = r.created_at.split('T')[0];
+      dayCounts[date] = (dayCounts[date] || 0) + 1;
     }
 
-    // Mock de estadísticas del comercio
-    const stats: BusinessStats = {
-      total_redemptions: 456,
-      redemptions_today: 12,
-      active_promotions: 3,
-      unique_tourists: 234,
-      redemptions_by_day: redemptionsByDay,
-      top_promotions: [
-        { id: 'promo_001', title: '20% en perfumes importados', usage_count: 245 },
-        { id: 'promo_002', title: '2x1 en cremas faciales', usage_count: 134 },
-        { id: 'promo_004', title: 'Gift card $5000', usage_count: 77 },
-      ],
-    };
+    // Build array with all 30 days (fill zeros for missing days)
+    const redemptionsByDay: Array<{ date: string; count: number }> = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      redemptionsByDay.push({ date: dateStr, count: dayCounts[dateStr] || 0 });
+    }
 
-    console.log(`[Stats] GET /business/${id} - Estadísticas del comercio`);
-    void supabaseAdmin;
-    void todayISO;
+    // Top promotions
+    const topPromotions: BusinessStats['top_promotions'] = (topPromosRaw || []).map((p) => ({
+      id: p.id,
+      title: p.title,
+      usage_count: p.current_uses,
+    }));
+
+    const stats: BusinessStats = {
+      total_redemptions: totalRedemptions ?? 0,
+      redemptions_today: redemptionsToday ?? 0,
+      active_promotions: activePromotions ?? 0,
+      unique_tourists: uniqueTourists,
+      redemptions_by_day: redemptionsByDay,
+      top_promotions: topPromotions,
+    };
 
     return NextResponse.json<ApiResponse<BusinessStats>>(
       { success: true, data: stats },

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 export default function CommerceDashboard() {
   const [pin, setPin] = useState('');
@@ -8,6 +9,13 @@ export default function CommerceDashboard() {
   
   const [business, setBusiness] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState([
+    { label: 'Total Canjes', value: '...', accent: '', icon: '🔄' },
+    { label: 'Canjes Hoy', value: '...', accent: 'success', icon: '📈' },
+    { label: 'Beneficios Activos', value: '...', accent: '', icon: '🎁' },
+    { label: 'Turistas Atendidos', value: '...', accent: 'warning', icon: '👤' },
+  ]);
+  const [recentCanjes, setRecentCanjes] = useState<any[]>([]);
 
   useEffect(() => {
     try {
@@ -20,14 +28,49 @@ export default function CommerceDashboard() {
     }
   }, []);
 
-  const stats = [
-    { label: 'Total Canjes', value: '0', accent: '', icon: '🔄' },
-    { label: 'Canjes Hoy', value: '0', accent: 'success', icon: '📈' },
-    { label: 'Beneficios Activos', value: '0', accent: '', icon: '🎁' },
-    { label: 'Turistas Atendidos', value: '0', accent: 'warning', icon: '👤' },
-  ];
+  // Cargar estadísticas reales cuando tenemos el business
+  useEffect(() => {
+    if (!business?.id) return;
+    async function loadStats() {
+      const bizId = business.id;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayISO = today.toISOString();
 
-  const recentCanjes: any[] = [];
+      const [totalRes, todayRes, activePromos, uniqueRes, recentRes] = await Promise.all([
+        supabase.from('redemptions').select('id', { count: 'exact', head: true }).eq('business_id', bizId),
+        supabase.from('redemptions').select('id', { count: 'exact', head: true }).eq('business_id', bizId).gte('created_at', todayISO),
+        supabase.from('promotions').select('id', { count: 'exact', head: true }).eq('business_id', bizId).eq('is_active', true),
+        supabase.from('redemptions').select('tourist_id').eq('business_id', bizId),
+        supabase.from('redemptions').select('id, created_at, pin_used, tourists(name, last_name), promotions(title)').eq('business_id', bizId).order('created_at', { ascending: false }).limit(5),
+      ]);
+
+      const uniqueTourists = new Set(uniqueRes.data?.map((r: any) => r.tourist_id) || []).size;
+
+      setStats([
+        { label: 'Total Canjes', value: String(totalRes.count || 0), accent: '', icon: '🔄' },
+        { label: 'Canjes Hoy', value: String(todayRes.count || 0), accent: 'success', icon: '📈' },
+        { label: 'Beneficios Activos', value: String(activePromos.count || 0), accent: '', icon: '🎁' },
+        { label: 'Turistas Atendidos', value: String(uniqueTourists), accent: 'warning', icon: '👤' },
+      ]);
+
+      if (recentRes.data) {
+        setRecentCanjes(recentRes.data.map((r: any) => {
+          const tourist = r.tourists as any;
+          const promo = r.promotions as any;
+          const mins = Math.round((Date.now() - new Date(r.created_at).getTime()) / 60000);
+          return {
+            tourist: `${tourist?.name || ''} ${tourist?.last_name || ''}`.trim() || 'Turista',
+            benefit: promo?.title || 'Promoción',
+            pin: r.pin_used,
+            time: mins < 60 ? `hace ${mins}m` : mins < 1440 ? `hace ${Math.round(mins / 60)}h` : `hace ${Math.round(mins / 1440)}d`,
+            status: 'completado',
+          };
+        }));
+      }
+    }
+    loadStats();
+  }, [business]);
 
   const handleValidate = () => {
     if (!pin.trim()) return;

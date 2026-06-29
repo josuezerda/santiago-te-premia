@@ -1,5 +1,6 @@
 // ============================================================
 // Tipos centrales para Santiago te Premia
+// Alineados con el esquema real de Supabase
 // ============================================================
 
 // --- Enums ---
@@ -7,14 +8,21 @@
 export enum Role {
   SUPER_ADMIN = 'SUPER_ADMIN',
   BUSINESS = 'BUSINESS',
-  HOTEL = 'HOTEL',
 }
 
-export type BusinessStatus = 'ACTIVE' | 'SUSPENDED' | 'PENDING';
+export type BusinessStatus = 'ACTIVE' | 'PAUSED' | 'SUSPENDED';
+
+export type PoiType = 'HOTEL' | 'TOURIST_SPOT' | 'COMMERCE' | 'OTHER';
+
+export type PromotionType = 'PERCENTAGE' | 'TWO_FOR_ONE' | 'GIFT' | 'SPECIAL' | 'EXCLUSIVE' | 'BY_DATE' | 'BY_CATEGORY';
 
 export type PromotionStatus = 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
 
-export type CampaignStatus = 'DRAFT' | 'SENT' | 'SCHEDULED';
+export type RedemptionStatus = 'COMPLETED' | 'CANCELLED';
+
+export type CampaignSegment = 'ALL_TOURISTS' | 'BY_HOTEL' | 'BY_CATEGORY' | 'BY_BUSINESS' | 'CUSTOM';
+
+export type CampaignStatus = 'DRAFT' | 'SENDING' | 'SENT' | 'FAILED';
 
 export type VoucherStatus = 'GENERATED' | 'REDEEMED' | 'EXPIRED';
 
@@ -23,11 +31,10 @@ export type VoucherStatus = 'GENERATED' | 'REDEEMED' | 'EXPIRED';
 export interface User {
   id: string;
   email: string;
-  password?: string;
+  password_hash?: string;
   name: string;
   role: Role;
   business_id?: string | null;
-  hotel_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -43,20 +50,31 @@ export interface Category {
 export interface Business {
   id: string;
   name: string;
-  category: string;
+  trade_name?: string;
+  cuit?: string;
   category_id?: string;
-  address: string;
-  description?: string;
-  phone?: string;
-  email?: string;
   logo_url?: string;
+  photos?: string[];
+  address: string;
+  latitude?: number;
+  longitude?: number;
+  phone?: string;
+  whatsapp?: string;
+  instagram?: string;
+  website?: string;
+  schedule?: Record<string, unknown>;
+  description?: string;
+  benefit_percentage?: number;
+  benefit_conditions?: string;
   status: BusinessStatus;
+  can_send_campaigns?: boolean;
+  can_edit_offers?: boolean;
   created_at: string;
   updated_at: string;
-  // Relaciones
+  // Relaciones (joins de Supabase)
+  categories?: { name: string } | { name: string }[];
   promotions?: Promotion[];
   users?: User[];
-  category_info?: Category;
 }
 
 export interface Promotion {
@@ -64,30 +82,30 @@ export interface Promotion {
   business_id: string;
   title: string;
   description: string;
-  discount_type?: string;
-  discount_value?: number;
-  max_uses?: number;
+  type: PromotionType;
+  discount_value: number;
+  conditions?: string;
+  max_uses?: number | null;
   current_uses: number;
-  active: boolean;
-  status: PromotionStatus;
   start_date?: string;
   end_date?: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Campo derivado para compatibilidad con frontend
+  status?: PromotionStatus;
   // Relaciones
   business?: Business;
+  businesses?: { name: string };
 }
 
 export interface PointOfInterest {
   id: string;
   name: string;
-  type: string; // 'HOTEL' | 'ATRACCION' | 'OFICINA_TURISMO'
+  type: PoiType;
   address: string;
   qr_identifier: string;
   description?: string;
-  latitude?: number;
-  longitude?: number;
-  active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -101,15 +119,13 @@ export interface Tourist {
   country?: string;
   province?: string;
   city?: string;
-  email?: string;
-  pin_secret: string;
   poi_id?: string;
-  hotel_id?: string;
-  registration_step?: string;
+  pin_secret: string;
+  is_subscribed?: boolean;
   created_at: string;
   updated_at: string;
   // Relaciones
-  point_of_interest?: PointOfInterest;
+  points_of_interest?: { name: string };
 }
 
 export interface Redemption {
@@ -118,34 +134,72 @@ export interface Redemption {
   promotion_id: string;
   business_id: string;
   pin_used: string;
-  validated_by_user_id?: string;
+  validated_by_user_id: string;
+  status: RedemptionStatus;
   created_at: string;
   // Relaciones
-  tourist?: Tourist;
-  promotion?: Promotion;
-  business?: Business;
+  tourists?: { name: string; last_name: string; phone?: string; country?: string };
+  promotions?: { title: string };
+  businesses?: { name: string };
+  users?: { name: string };
 }
 
 export interface Campaign {
   id: string;
   title: string;
-  message: string;
-  target_audience?: string;
+  template_name?: string;
+  template_params?: Record<string, unknown>;
+  segment: CampaignSegment;
+  segment_filter?: Record<string, unknown>;
   status: CampaignStatus;
-  sent_at?: string;
-  scheduled_at?: string;
-  recipients_count?: number;
-  created_by?: string;
+  sent_count: number;
+  delivered_count: number;
+  read_count: number;
+  created_by_user_id?: string;
+  business_id?: string | null;
+  created_at: string;
+  sent_at?: string | null;
+}
+
+export interface Reservation {
+  id: string;
+  tourist_id: string;
+  promotion_id: string;
+  business_id: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
+  expires_at: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface SystemSettings {
   id: string;
+  whatsapp_api_token: string;
+  whatsapp_verify_token: string;
+  whatsapp_phone_number_id: string;
+  whatsapp_business_account_id: string;
+  webhook_url: string;
   pin_expiration_seconds: number;
   welcome_message: string;
-  max_promotions_per_business: number;
-  maintenance_mode: boolean;
+  main_menu_config: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessValidator {
+  id: string;
+  business_id: string;
+  phone: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ConversationState {
+  id: string;
+  phone: string;
+  state: string;
+  data: Record<string, unknown>;
   updated_at: string;
 }
 
@@ -166,7 +220,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 
 export interface LoginResponse {
   token: string;
-  user: Omit<User, 'password'>;
+  user: Omit<User, 'password_hash'>;
   business?: Business;
 }
 

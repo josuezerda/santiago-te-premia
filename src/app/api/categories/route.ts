@@ -7,80 +7,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import type { ApiResponse, Category } from '@/lib/types';
 
-// Mock de categorías para desarrollo
-const mockCategories: Category[] = [
-  {
-    id: 'cat_001',
-    name: 'Perfumería',
-    description: 'Perfumerías, cosméticos y productos de belleza',
-    icon: '🧴',
-    created_at: '2025-01-01T10:00:00Z',
-  },
-  {
-    id: 'cat_002',
-    name: 'Gastronomía',
-    description: 'Restaurantes, parrillas, cafés y bares',
-    icon: '🍖',
-    created_at: '2025-01-01T10:00:00Z',
-  },
-  {
-    id: 'cat_003',
-    name: 'Artesanías',
-    description: 'Artesanías regionales y souvenirs',
-    icon: '🎨',
-    created_at: '2025-01-01T10:00:00Z',
-  },
-  {
-    id: 'cat_004',
-    name: 'Hotelería',
-    description: 'Hoteles, hostels y alojamientos',
-    icon: '🏨',
-    created_at: '2025-01-01T10:00:00Z',
-  },
-  {
-    id: 'cat_005',
-    name: 'Heladería',
-    description: 'Heladerías artesanales',
-    icon: '🍦',
-    created_at: '2025-01-01T10:00:00Z',
-  },
-  {
-    id: 'cat_006',
-    name: 'Bodega',
-    description: 'Bodegas y vinotecas',
-    icon: '🍷',
-    created_at: '2025-01-01T10:00:00Z',
-  },
-  {
-    id: 'cat_007',
-    name: 'Indumentaria',
-    description: 'Ropa, calzado y accesorios',
-    icon: '👗',
-    created_at: '2025-01-01T10:00:00Z',
-  },
-  {
-    id: 'cat_008',
-    name: 'Turismo Aventura',
-    description: 'Excursiones, cabalgatas y actividades al aire libre',
-    icon: '🏔️',
-    created_at: '2025-01-01T10:00:00Z',
-  },
-];
-
 export async function GET(_request: NextRequest) {
   try {
-    // TODO: Consulta real a Supabase
-    // const { data, error } = await supabaseAdmin
-    //   .from('categories')
-    //   .select('*')
-    //   .order('name', { ascending: true });
-    // if (error) throw error;
+    const { data, error } = await supabaseAdmin
+      .from('categories')
+      .select('*')
+      .order('name', { ascending: true });
 
-    console.log(`[Categories] GET - Listando ${mockCategories.length} categorías`);
-    void supabaseAdmin;
+    if (error) throw error;
 
     return NextResponse.json<ApiResponse<Category[]>>(
-      { success: true, data: mockCategories },
+      { success: true, data },
       { status: 200 }
     );
   } catch (error) {
@@ -97,7 +34,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, description, icon } = body;
 
-    // Validaciones
     if (!name) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: 'El nombre de la categoría es requerido' },
@@ -105,29 +41,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Verificar que no exista otra categoría con el mismo nombre
-    // TODO: Verificar autorización (SUPER_ADMIN)
+    // Verificar unicidad case-insensitive
+    const { data: existing, error: checkError } = await supabaseAdmin
+      .from('categories')
+      .select('id')
+      .ilike('name', name)
+      .maybeSingle();
 
-    // TODO: Insertar en Supabase
-    // const { data, error } = await supabaseAdmin
-    //   .from('categories')
-    //   .insert({ name, description, icon })
-    //   .select()
-    //   .single();
+    if (checkError) throw checkError;
 
-    const newCategory: Category = {
-      id: `cat_${Date.now()}`,
-      name,
-      description: description || null,
-      icon: icon || null,
-      created_at: new Date().toISOString(),
-    };
+    if (existing) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: 'Ya existe una categoría con ese nombre' },
+        { status: 409 }
+      );
+    }
 
-    console.log(`[Categories] POST - Categoría creada: ${name}`);
-    void supabaseAdmin;
+    const { data, error } = await supabaseAdmin
+      .from('categories')
+      .insert({
+        name,
+        description: description || null,
+        icon: icon || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json<ApiResponse<Category>>(
-      { success: true, data: newCategory, message: 'Categoría creada exitosamente' },
+      { success: true, data, message: 'Categoría creada exitosamente' },
       { status: 201 }
     );
   } catch (error) {

@@ -9,45 +9,31 @@ import QRCode from 'qrcode';
 import { supabaseAdmin } from '@/lib/supabase';
 import type { ApiResponse } from '@/lib/types';
 
-// Mock de identificadores QR por punto de interés
-const mockQrIdentifiers: Record<string, string> = {
-  poi_001: 'HOTEL_CARLOSV',
-  poi_002: 'HOTEL_SAVOY',
-  poi_003: 'OFI_TURISMO_MUNI',
-  poi_004: 'TERMAS_ENTRADA',
-};
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '5493854000000';
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '5493850000000';
 
-    // TODO: Consulta real a Supabase para obtener el punto de interés
-    // const { data: poi, error } = await supabaseAdmin
-    //   .from('points_of_interest')
-    //   .select('qr_identifier')
-    //   .eq('id', id)
-    //   .single();
-    // if (error || !poi) return 404;
-    // const qrIdentifier = poi.qr_identifier;
+    const { data: poi, error } = await supabaseAdmin
+      .from('points_of_interest')
+      .select('qr_identifier, name')
+      .eq('id', id)
+      .single();
 
-    const qrIdentifier = mockQrIdentifiers[id];
-
-    if (!qrIdentifier) {
+    if (error || !poi) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: 'Punto de interés no encontrado' },
         { status: 404 }
       );
     }
 
-    // Construir el enlace de WhatsApp con el mensaje de registro
-    const whatsappLink = `https://wa.me/${phoneNumberId}?text=REGISTRO_${qrIdentifier}`;
+    const { qr_identifier } = poi;
 
-    console.log(`[QR] Generando QR para punto ${id}: ${whatsappLink}`);
-    void supabaseAdmin;
+    // Construir el enlace de WhatsApp con el mensaje de registro
+    const whatsappLink = `https://wa.me/${phoneNumberId}?text=REGISTRO_${qr_identifier}`;
 
     // Verificar si se pide formato JSON (para obtener la URL en vez de la imagen)
     const format = new URL(request.url).searchParams.get('format');
@@ -70,7 +56,8 @@ export async function GET(
           data: {
             qr_data_url: qrDataUrl,
             whatsapp_link: whatsappLink,
-            qr_identifier: qrIdentifier,
+            qr_identifier,
+            name: poi.name,
           },
         },
         { status: 200 }
@@ -86,7 +73,7 @@ export async function GET(
         dark: '#000000',
         light: '#FFFFFF',
       },
-      errorCorrectionLevel: 'H', // Alta corrección de errores
+      errorCorrectionLevel: 'H',
     });
 
     // Retornar la imagen PNG directamente
@@ -94,8 +81,8 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'image/png',
-        'Content-Disposition': `inline; filename="qr-${qrIdentifier}.png"`,
-        'Cache-Control': 'public, max-age=3600', // Cache por 1 hora
+        'Content-Disposition': `inline; filename="qr-${qr_identifier}.png"`,
+        'Cache-Control': 'public, max-age=3600',
       },
     });
   } catch (error) {

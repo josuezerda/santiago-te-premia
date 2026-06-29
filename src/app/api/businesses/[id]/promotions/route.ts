@@ -7,80 +7,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import type { ApiResponse, Promotion } from '@/lib/types';
 
-// Mock de promociones para desarrollo
-const mockPromotions: Record<string, Promotion[]> = {
-  biz_001: [
-    {
-      id: 'promo_001',
-      business_id: 'biz_001',
-      title: '20% en perfumes importados',
-      description: 'Descuento en toda la línea de perfumes importados presentando el PIN de turista',
-      discount_type: 'PERCENTAGE',
-      discount_value: 20,
-      max_uses: 100,
-      current_uses: 45,
-      active: true,
-      status: 'ACTIVE',
-      start_date: '2025-01-01T00:00:00Z',
-      end_date: '2025-12-31T23:59:59Z',
-      created_at: '2025-01-20T10:00:00Z',
-      updated_at: '2025-01-20T10:00:00Z',
-    },
-    {
-      id: 'promo_002',
-      business_id: 'biz_001',
-      title: '2x1 en cremas faciales',
-      description: 'Llevá 2 cremas faciales y pagá solo 1',
-      discount_type: 'TWO_FOR_ONE',
-      discount_value: 50,
-      max_uses: 50,
-      current_uses: 12,
-      active: true,
-      status: 'ACTIVE',
-      created_at: '2025-02-01T10:00:00Z',
-      updated_at: '2025-02-01T10:00:00Z',
-    },
-  ],
-  biz_002: [
-    {
-      id: 'promo_003',
-      business_id: 'biz_002',
-      title: 'Postre gratis con tu menú',
-      description: 'Pedí cualquier menú y llevate un postre gratis',
-      discount_type: 'FREE_ITEM',
-      discount_value: 0,
-      max_uses: 200,
-      current_uses: 89,
-      active: true,
-      status: 'ACTIVE',
-      created_at: '2025-02-15T10:00:00Z',
-      updated_at: '2025-02-15T10:00:00Z',
-    },
-  ],
-};
-
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
 
-    // TODO: Consulta real a Supabase
-    // const { data, error } = await supabaseAdmin
-    //   .from('promotions')
-    //   .select('*')
-    //   .eq('business_id', id)
-    //   .order('created_at', { ascending: false });
-    // if (error) throw error;
+    const { data, error } = await supabaseAdmin
+      .from('promotions')
+      .select('*')
+      .eq('business_id', id)
+      .order('created_at', { ascending: false });
 
-    const promotions = mockPromotions[id] || [];
-
-    console.log(`[Promotions] GET /businesses/${id}/promotions - ${promotions.length} promociones`);
-    void supabaseAdmin;
+    if (error) throw error;
 
     return NextResponse.json<ApiResponse<Promotion[]>>(
-      { success: true, data: promotions },
+      { success: true, data },
       { status: 200 }
     );
   } catch (error) {
@@ -97,11 +40,19 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: businessId } = await params;
+    const { id } = await params;
     const body = await request.json();
-    const { title, description, discount_type, discount_value, max_uses, start_date, end_date } = body;
+    const {
+      title,
+      description,
+      type,
+      discount_value,
+      conditions,
+      max_uses,
+      start_date,
+      end_date,
+    } = body;
 
-    // Validaciones básicas
     if (!title || !description) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: 'Título y descripción son requeridos' },
@@ -109,43 +60,44 @@ export async function POST(
       );
     }
 
-    // TODO: Verificar que el comercio existe
-    // TODO: Verificar autorización (SUPER_ADMIN o usuario del comercio)
+    // Verificar que el comercio existe
+    const { data: business, error: bizError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
 
-    // TODO: Insertar en Supabase
-    // const { data, error } = await supabaseAdmin
-    //   .from('promotions')
-    //   .insert({
-    //     business_id: businessId,
-    //     title, description, discount_type, discount_value,
-    //     max_uses, start_date, end_date,
-    //     current_uses: 0, active: true, status: 'ACTIVE'
-    //   })
-    //   .select()
-    //   .single();
+    if (bizError) throw bizError;
 
-    const newPromotion: Promotion = {
-      id: `promo_${Date.now()}`,
-      business_id: businessId,
-      title,
-      description,
-      discount_type: discount_type || 'PERCENTAGE',
-      discount_value: discount_value || 0,
-      max_uses: max_uses || null,
-      current_uses: 0,
-      active: true,
-      status: 'ACTIVE',
-      start_date: start_date || null,
-      end_date: end_date || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    if (!business) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: 'Comercio no encontrado' },
+        { status: 404 }
+      );
+    }
 
-    console.log(`[Promotions] POST /businesses/${businessId}/promotions - Promoción creada: ${title}`);
-    void supabaseAdmin;
+    const { data, error } = await supabaseAdmin
+      .from('promotions')
+      .insert({
+        business_id: id,
+        title,
+        description,
+        type: type || 'PERCENTAGE',
+        discount_value: discount_value ?? 0,
+        conditions: conditions || null,
+        max_uses: max_uses || null,
+        start_date: start_date || null,
+        end_date: end_date || null,
+        is_active: true,
+        current_uses: 0,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json<ApiResponse<Promotion>>(
-      { success: true, data: newPromotion, message: 'Promoción creada exitosamente' },
+      { success: true, data, message: 'Promoción creada exitosamente' },
       { status: 201 }
     );
   } catch (error) {

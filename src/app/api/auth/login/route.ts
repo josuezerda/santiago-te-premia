@@ -1,11 +1,12 @@
 // ============================================================
 // POST /api/auth/login
 // Autenticación real contra la base de datos
-// Valida credenciales con bcrypt y retorna token + info del usuario
+// Valida credenciales con bcrypt y retorna JWT firmado + info del usuario
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { createUserToken } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
@@ -73,13 +74,13 @@ async function buildLoginResponse(user: any) {
     business = biz;
   }
 
-  const token = `stp_${Buffer.from(JSON.stringify({
+  // Generar JWT firmado con HS256
+  const token = await createUserToken({
     userId: user.id,
     email: user.email,
     role: user.role,
     businessId: user.business_id,
-    exp: Date.now() + 24 * 60 * 60 * 1000,
-  })).toString('base64')}`;
+  });
 
   console.log(`[Auth] Login exitoso: ${user.email} (${user.role})`);
 

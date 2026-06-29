@@ -13,116 +13,124 @@ export async function GET(_request: NextRequest) {
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
 
-    // TODO: Consultas reales a Supabase
-    // --- Total de turistas ---
-    // const { count: totalTourists } = await supabaseAdmin
-    //   .from('tourists').select('*', { count: 'exact', head: true });
+    // Run all independent count queries in parallel
+    const [
+      { count: totalTourists },
+      { count: touristsToday },
+      { count: totalBusinesses },
+      { count: activeBusinesses },
+      { count: totalRedemptions },
+      { count: redemptionsToday },
+      { count: activePromotions },
+      { count: totalCampaigns },
+    ] = await Promise.all([
+      supabaseAdmin.from('tourists').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('tourists').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
+      supabaseAdmin.from('businesses').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('businesses').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
+      supabaseAdmin.from('redemptions').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('redemptions').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
+      supabaseAdmin.from('promotions').select('*', { count: 'exact', head: true }).eq('is_active', true),
+      supabaseAdmin.from('campaigns').select('*', { count: 'exact', head: true }),
+    ]);
 
-    // --- Turistas registrados hoy ---
-    // const { count: touristsToday } = await supabaseAdmin
-    //   .from('tourists').select('*', { count: 'exact', head: true })
-    //   .gte('created_at', todayISO);
+    // --- Top businesses by redemptions ---
+    const { data: allRedemptions } = await supabaseAdmin
+      .from('redemptions')
+      .select('business_id');
 
-    // --- Total de comercios ---
-    // const { count: totalBusinesses } = await supabaseAdmin
-    //   .from('businesses').select('*', { count: 'exact', head: true });
+    const businessCounts: Record<string, number> = {};
+    for (const r of allRedemptions || []) {
+      businessCounts[r.business_id] = (businessCounts[r.business_id] || 0) + 1;
+    }
 
-    // --- Comercios activos ---
-    // const { count: activeBusinesses } = await supabaseAdmin
-    //   .from('businesses').select('*', { count: 'exact', head: true })
-    //   .eq('status', 'ACTIVE');
+    const topBusinessIds = Object.entries(businessCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
 
-    // --- Total de canjes ---
-    // const { count: totalRedemptions } = await supabaseAdmin
-    //   .from('redemptions').select('*', { count: 'exact', head: true });
+    let topBusinesses: DashboardStats['top_businesses'] = [];
+    if (topBusinessIds.length > 0) {
+      const ids = topBusinessIds.map(([id]) => id);
+      const { data: businessNames } = await supabaseAdmin
+        .from('businesses')
+        .select('id, name')
+        .in('id', ids);
 
-    // --- Canjes de hoy ---
-    // const { count: redemptionsToday } = await supabaseAdmin
-    //   .from('redemptions').select('*', { count: 'exact', head: true })
-    //   .gte('created_at', todayISO);
+      const nameMap: Record<string, string> = {};
+      for (const b of businessNames || []) {
+        nameMap[b.id] = b.name;
+      }
 
-    // --- Promociones activas ---
-    // const { count: activePromotions } = await supabaseAdmin
-    //   .from('promotions').select('*', { count: 'exact', head: true })
-    //   .eq('active', true);
+      topBusinesses = topBusinessIds.map(([id, count]) => ({
+        id,
+        name: nameMap[id] || 'Desconocido',
+        redemption_count: count,
+      }));
+    }
 
-    // --- Total de campañas ---
-    // const { count: totalCampaigns } = await supabaseAdmin
-    //   .from('campaigns').select('*', { count: 'exact', head: true });
+    // --- Top promotions by usage ---
+    const { data: topPromosRaw } = await supabaseAdmin
+      .from('promotions')
+      .select('id, title, current_uses, businesses(name)')
+      .order('current_uses', { ascending: false })
+      .limit(5);
 
-    // --- Top comercios por canjes ---
-    // const { data: topBusinesses } = await supabaseAdmin
-    //   .rpc('get_top_businesses_by_redemptions', { limit_count: 5 });
+    const topPromotions: DashboardStats['top_promotions'] = (topPromosRaw || []).map((p) => ({
+      id: p.id,
+      title: p.title,
+      usage_count: p.current_uses,
+      business_name: (p.businesses as unknown as { name: string })?.name || 'Desconocido',
+    }));
 
-    // --- Top promociones ---
-    // const { data: topPromotions } = await supabaseAdmin
-    //   .from('promotions').select('id, title, current_uses, business:businesses(name)')
-    //   .order('current_uses', { ascending: false }).limit(5);
+    // --- Registrations by POI ---
+    const { data: touristsWithPoi } = await supabaseAdmin
+      .from('tourists')
+      .select('poi_id')
+      .not('poi_id', 'is', null);
 
-    // --- Registros por punto de interés ---
-    // const { data: registrationsByPoi } = await supabaseAdmin
-    //   .rpc('get_registrations_by_poi');
+    const poiCounts: Record<string, number> = {};
+    for (const t of touristsWithPoi || []) {
+      if (t.poi_id) {
+        poiCounts[t.poi_id] = (poiCounts[t.poi_id] || 0) + 1;
+      }
+    }
 
-    // Mock de estadísticas para desarrollo
+    const topPoiEntries = Object.entries(poiCounts)
+      .sort(([, a], [, b]) => b - a);
+
+    let registrationsByPoi: DashboardStats['registrations_by_poi'] = [];
+    if (topPoiEntries.length > 0) {
+      const poiIds = topPoiEntries.map(([id]) => id);
+      const { data: poiNames } = await supabaseAdmin
+        .from('points_of_interest')
+        .select('id, name')
+        .in('id', poiIds);
+
+      const poiNameMap: Record<string, string> = {};
+      for (const p of poiNames || []) {
+        poiNameMap[p.id] = p.name;
+      }
+
+      registrationsByPoi = topPoiEntries.map(([id, count]) => ({
+        poi_id: id,
+        poi_name: poiNameMap[id] || 'Desconocido',
+        count,
+      }));
+    }
+
     const stats: DashboardStats = {
-      total_tourists: 1247,
-      tourists_today: 23,
-      total_businesses: 45,
-      active_businesses: 38,
-      total_redemptions: 3891,
-      redemptions_today: 67,
-      active_promotions: 72,
-      total_campaigns: 12,
-      top_businesses: [
-        { id: 'biz_001', name: 'MaryBe Perfumería', redemption_count: 456 },
-        { id: 'biz_002', name: 'La Parrilla de Don Juan', redemption_count: 389 },
-        { id: 'biz_003', name: 'Artesanías del Norte', redemption_count: 234 },
-        { id: 'biz_005', name: 'Heladería Andina', redemption_count: 198 },
-        { id: 'biz_006', name: 'Bodega Santiago', redemption_count: 156 },
-      ],
-      top_promotions: [
-        {
-          id: 'promo_001',
-          title: '20% en perfumes importados',
-          usage_count: 245,
-          business_name: 'MaryBe Perfumería',
-        },
-        {
-          id: 'promo_003',
-          title: 'Postre gratis con tu menú',
-          usage_count: 189,
-          business_name: 'La Parrilla de Don Juan',
-        },
-        {
-          id: 'promo_005',
-          title: '15% en artesanías',
-          usage_count: 134,
-          business_name: 'Artesanías del Norte',
-        },
-        {
-          id: 'promo_007',
-          title: '2x1 en helados',
-          usage_count: 98,
-          business_name: 'Heladería Andina',
-        },
-        {
-          id: 'promo_010',
-          title: 'Degustación gratis',
-          usage_count: 76,
-          business_name: 'Bodega Santiago',
-        },
-      ],
-      registrations_by_poi: [
-        { poi_id: 'poi_001', poi_name: 'Hotel Carlos V', count: 456 },
-        { poi_id: 'poi_002', poi_name: 'Hotel Savoy', count: 321 },
-        { poi_id: 'poi_003', poi_name: 'Oficina de Turismo Municipal', count: 278 },
-        { poi_id: 'poi_004', poi_name: 'Termas de Río Hondo - Entrada', count: 192 },
-      ],
+      total_tourists: totalTourists ?? 0,
+      tourists_today: touristsToday ?? 0,
+      total_businesses: totalBusinesses ?? 0,
+      active_businesses: activeBusinesses ?? 0,
+      total_redemptions: totalRedemptions ?? 0,
+      redemptions_today: redemptionsToday ?? 0,
+      active_promotions: activePromotions ?? 0,
+      total_campaigns: totalCampaigns ?? 0,
+      top_businesses: topBusinesses,
+      top_promotions: topPromotions,
+      registrations_by_poi: registrationsByPoi,
     };
-
-    console.log('[Stats] GET - Estadísticas del dashboard generadas');
-    void supabaseAdmin;
-    void todayISO;
 
     return NextResponse.json<ApiResponse<DashboardStats>>(
       { success: true, data: stats },

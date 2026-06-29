@@ -5,61 +5,19 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import type { ApiResponse, Campaign, CampaignStatus } from '@/lib/types';
-
-// Mock de campañas para desarrollo
-const mockCampaigns: Campaign[] = [
-  {
-    id: 'camp_001',
-    title: 'Bienvenida a Santiago',
-    message: '¡Hola! Bienvenido a Santiago del Estero. Descubrí los beneficios exclusivos que tenemos para vos. Escribí MENU para ver opciones.',
-    target_audience: 'ALL',
-    status: 'SENT' as CampaignStatus,
-    sent_at: '2025-06-01T10:00:00Z',
-    recipients_count: 523,
-    created_by: 'usr_admin_001',
-    created_at: '2025-05-28T10:00:00Z',
-    updated_at: '2025-06-01T10:00:00Z',
-  },
-  {
-    id: 'camp_002',
-    title: 'Promo Fin de Semana',
-    message: '🎉 Este fin de semana tenemos promociones especiales en gastronomía. ¡No te las pierdas! Escribí BENEFICIOS para ver todo.',
-    target_audience: 'ACTIVE_TOURISTS',
-    status: 'DRAFT' as CampaignStatus,
-    recipients_count: 0,
-    created_by: 'usr_admin_001',
-    created_at: '2025-06-20T15:00:00Z',
-    updated_at: '2025-06-20T15:00:00Z',
-  },
-  {
-    id: 'camp_003',
-    title: 'Nuevos comercios adheridos',
-    message: '📢 Se sumaron 5 nuevos comercios a Santiago te Premia. Más descuentos y beneficios para disfrutar tu estadía.',
-    target_audience: 'ALL',
-    status: 'SCHEDULED' as CampaignStatus,
-    scheduled_at: '2025-07-01T09:00:00Z',
-    recipients_count: 0,
-    created_by: 'usr_admin_001',
-    created_at: '2025-06-25T10:00:00Z',
-    updated_at: '2025-06-25T10:00:00Z',
-  },
-];
+import type { ApiResponse, Campaign } from '@/lib/types';
 
 export async function GET(_request: NextRequest) {
   try {
-    // TODO: Consulta real a Supabase
-    // const { data, error } = await supabaseAdmin
-    //   .from('campaigns')
-    //   .select('*')
-    //   .order('created_at', { ascending: false });
-    // if (error) throw error;
+    const { data, error } = await supabaseAdmin
+      .from('campaigns')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    console.log(`[Campaigns] GET - Listando ${mockCampaigns.length} campañas`);
-    void supabaseAdmin;
+    if (error) throw error;
 
     return NextResponse.json<ApiResponse<Campaign[]>>(
-      { success: true, data: mockCampaigns },
+      { success: true, data },
       { status: 200 }
     );
   } catch (error) {
@@ -74,47 +32,45 @@ export async function GET(_request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, message, target_audience, scheduled_at } = body;
+    const {
+      title,
+      created_by_user_id,
+      template_name,
+      template_params,
+      segment,
+      segment_filter,
+      business_id,
+    } = body;
 
-    // Validaciones
-    if (!title || !message) {
+    if (!title || !created_by_user_id) {
       return NextResponse.json<ApiResponse>(
-        { success: false, error: 'Título y mensaje son requeridos' },
+        { success: false, error: 'Título y created_by_user_id son requeridos' },
         { status: 400 }
       );
     }
 
-    // TODO: Verificar autorización (SUPER_ADMIN)
+    const { data, error } = await supabaseAdmin
+      .from('campaigns')
+      .insert({
+        title,
+        created_by_user_id,
+        template_name: template_name || null,
+        template_params: template_params || null,
+        segment: segment || 'ALL_TOURISTS',
+        segment_filter: segment_filter || null,
+        status: 'DRAFT',
+        sent_count: 0,
+        delivered_count: 0,
+        read_count: 0,
+        business_id: business_id || null,
+      })
+      .select()
+      .single();
 
-    // TODO: Insertar en Supabase
-    // const { data, error } = await supabaseAdmin
-    //   .from('campaigns')
-    //   .insert({
-    //     title, message, target_audience,
-    //     status: 'DRAFT',
-    //     scheduled_at: scheduled_at || null,
-    //     created_by: userId
-    //   })
-    //   .select()
-    //   .single();
-
-    const newCampaign: Campaign = {
-      id: `camp_${Date.now()}`,
-      title,
-      message,
-      target_audience: target_audience || 'ALL',
-      status: 'DRAFT' as CampaignStatus,
-      scheduled_at: scheduled_at || null,
-      recipients_count: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    console.log(`[Campaigns] POST - Campaña creada: ${title} (borrador)`);
-    void supabaseAdmin;
+    if (error) throw error;
 
     return NextResponse.json<ApiResponse<Campaign>>(
-      { success: true, data: newCampaign, message: 'Campaña creada como borrador' },
+      { success: true, data, message: 'Campaña creada como borrador' },
       { status: 201 }
     );
   } catch (error) {
