@@ -119,6 +119,90 @@ export default function CommerceDashboard() {
         ))}
       </div>
 
+      {/* Mi Comercio - Datos y Redes */}
+      {business && (
+        <div className="card-static" style={{ marginBottom: '30px' }}>
+          <div className="section-title" style={{ marginBottom: '16px' }}>
+            <span>🏪 Mi Comercio</span>
+            <Link href="/dashboard/config" style={{ color: 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: 500 }}>
+              Editar datos →
+            </Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            {business.address && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span>📍</span>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Dirección</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{business.address}</div>
+                </div>
+              </div>
+            )}
+            {business.phone && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span>📞</span>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Teléfono</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{business.phone}</div>
+                </div>
+              </div>
+            )}
+            {business.website && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span>🌐</span>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sitio Web</div>
+                  <a href={business.website} target="_blank" style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--accent-primary)', textDecoration: 'none' }}>
+                    {business.website.replace('https://', '').replace('http://', '')}
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Redes Sociales */}
+          {(business.instagram || business.facebook || business.tiktok || business.twitter) && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '10px', fontWeight: 600 }}>REDES SOCIALES</div>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {business.instagram && (
+                  <a href={business.instagram.startsWith('http') ? business.instagram : `https://instagram.com/${business.instagram.replace('@', '')}`} target="_blank" style={{
+                    display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #833AB4, #E1306C, #F77737)', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600,
+                  }}>
+                    📷 Instagram
+                  </a>
+                )}
+                {business.facebook && (
+                  <a href={business.facebook.startsWith('http') ? business.facebook : `https://facebook.com/${business.facebook}`} target="_blank" style={{
+                    display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px',
+                    background: '#1877F2', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600,
+                  }}>
+                    👍 Facebook
+                  </a>
+                )}
+                {business.tiktok && (
+                  <a href={business.tiktok.startsWith('http') ? business.tiktok : `https://tiktok.com/@${business.tiktok.replace('@', '')}`} target="_blank" style={{
+                    display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px',
+                    background: '#010101', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600,
+                  }}>
+                    🎵 TikTok
+                  </a>
+                )}
+                {business.twitter && (
+                  <a href={business.twitter.startsWith('http') ? business.twitter : `https://x.com/${business.twitter.replace('@', '')}`} target="_blank" style={{
+                    display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px',
+                    background: '#1DA1F2', color: 'white', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600,
+                  }}>
+                    🐦 X / Twitter
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Quick PIN Validation Widget */}
       <div className="card-static" style={{
         marginBottom: '30px',

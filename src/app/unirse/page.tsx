@@ -26,7 +26,11 @@ export default function UnirsePage() {
     phone: '',
     whatsapp: '',
     instagram: '',
+    facebook: '',
+    tiktok: '',
+    twitter: '',
     website: '',
+    noWebsite: false,
     map_url: '',
     benefit_percentage: '',
     benefit_conditions: '',
@@ -303,23 +307,60 @@ export default function UnirsePage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={labelStyle}>Instagram</label>
-                  <input style={inputStyle} placeholder="@tucomercio" value={form.instagram} onChange={e => updateField('instagram', e.target.value)} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Sitio Web</label>
+              {/* Sitio Web con opción de no tener */}
+              <div>
+                <label style={labelStyle}>Sitio Web</label>
+                {!form.noWebsite && (
                   <input style={inputStyle} type="text" placeholder="ej: www.tucomercio.com.ar" value={form.website} onChange={e => updateField('website', e.target.value)} />
+                )}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '0.82rem', color: '#64748b', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.noWebsite} onChange={e => {
+                    setForm(prev => ({ ...prev, noWebsite: e.target.checked, website: e.target.checked ? '' : prev.website }));
+                  }} style={{ accentColor: '#6366f1' }} />
+                  No tengo sitio web
+                </label>
+              </div>
+
+              {/* Redes Sociales */}
+              <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '4px', color: '#334155' }}>
+                  📱 Redes Sociales
+                </h3>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '16px' }}>
+                  Podés agregar el enlace de tus redes sociales para que los turistas te puedan seguir y conocer más sobre tu comercio.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>📷 Instagram</label>
+                    <input style={inputStyle} placeholder="https://instagram.com/tucomercio" value={form.instagram} onChange={e => updateField('instagram', e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>👍 Facebook</label>
+                    <input style={inputStyle} placeholder="https://facebook.com/tucomercio" value={form.facebook} onChange={e => updateField('facebook', e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>🎵 TikTok</label>
+                    <input style={inputStyle} placeholder="https://tiktok.com/@tucomercio" value={form.tiktok} onChange={e => updateField('tiktok', e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>🐦 X / Twitter</label>
+                    <input style={inputStyle} placeholder="https://x.com/tucomercio" value={form.twitter} onChange={e => updateField('twitter', e.target.value)} />
+                  </div>
                 </div>
               </div>
 
+              {/* Google Maps */}
               <div>
                 <label style={labelStyle}>Enlace de Google Maps</label>
                 <input style={inputStyle} type="text" placeholder="https://maps.google.com/..." value={form.map_url} onChange={e => updateField('map_url', e.target.value)} />
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.72rem', color: '#94a3b8' }}>
-                  Buscá tu comercio en Google Maps → &quot;Compartir&quot; → copiá el enlace y pegalo acá.
-                </p>
+                <div style={{ background: '#eff6ff', borderRadius: '8px', padding: '10px 12px', marginTop: '8px', border: '1px solid #bfdbfe' }}>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#1e40af', lineHeight: 1.5 }}>
+                    🗺️ <strong>¿Para qué pedimos esto?</strong> Para que tu comercio aparezca ubicado en el mapa interactivo que ven todos los turistas y usuarios del programa. Así pueden ver dónde queda tu local y cómo llegar.
+                  </p>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '0.7rem', color: '#3b82f6' }}>
+                    💡 Buscá tu comercio en Google Maps → tocá &quot;Compartir&quot; → copiá el enlace y pegalo acá.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
