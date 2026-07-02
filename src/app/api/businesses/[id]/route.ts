@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import type { ApiResponse, Business } from '@/lib/types';
 import bcrypt from 'bcryptjs';
+import { geocodeAddress } from '@/lib/geocode';
 
 export async function GET(
   request: NextRequest,
@@ -51,6 +52,15 @@ export async function PUT(
     const body = await request.json();
 
     const { user_email, user_password, user_name, ...businessData } = body;
+
+    // Geocodificar dirección si fue modificada
+    if (businessData.address && typeof businessData.address === 'string') {
+      const coords = await geocodeAddress(businessData.address.trim());
+      if (coords) {
+        businessData.lat = coords.lat;
+        businessData.lng = coords.lng;
+      }
+    }
 
     // Actualizar datos del comercio
     if (Object.keys(businessData).length > 0) {

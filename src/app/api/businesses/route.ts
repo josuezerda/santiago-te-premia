@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { geocodeAddress } from '@/lib/geocode';
 
 export async function GET(request: NextRequest) {
   try {
@@ -67,6 +68,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Geocodificar dirección
+    let lat = null;
+    let lng = null;
+    if (address?.trim()) {
+      const coords = await geocodeAddress(address.trim());
+      if (coords) {
+        lat = coords.lat;
+        lng = coords.lng;
+      }
+    }
+
     // 1. Crear el comercio
     const { data: business, error: bizErr } = await supabaseAdmin
       .from('businesses')
@@ -87,6 +99,8 @@ export async function POST(request: NextRequest) {
         can_send_campaigns: can_send_campaigns || false,
         can_edit_offers: can_edit_offers !== undefined ? can_edit_offers : true,
         map_url: map_url || null,
+        lat,
+        lng,
       })
       .select()
       .single();

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { geocodeAddress } from '@/lib/geocode';
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,6 +53,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Geocodificar dirección
+    let lat = null;
+    let lng = null;
+    if (address?.trim()) {
+      const coords = await geocodeAddress(address.trim());
+      if (coords) {
+        lat = coords.lat;
+        lng = coords.lng;
+      }
+    }
+
     // Crear comercio con estado PENDING
     const { data: business, error: bizErr } = await supabaseAdmin
       .from('businesses')
@@ -72,6 +84,8 @@ export async function POST(request: NextRequest) {
         logo_url: logo_url || null,
         photos: photos || [],
         status: 'PENDING',
+        lat,
+        lng,
         can_send_campaigns: false,
         can_edit_offers: true,
       })
