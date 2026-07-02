@@ -618,16 +618,83 @@ export async function POST(request: NextRequest) {
         return ok();
       }
 
-      const jwtToken = await createTouristToken(tourist.id, tourist.name || '');
-      const link = `${baseUrl}/catalogo?token=${jwtToken}`;
+      // Obtener comercios activos
+      const { data: bizList } = await supabaseAdmin
+        .from('businesses')
+        .select('id, name, categories ( name )')
+        .eq('status', 'ACTIVE')
+        .order('name');
 
-      await sendText(from,
-        `🛍️ *Catálogo de Beneficios*\n\n` +
-        `¡Hola ${tourist.name}! Tocá el siguiente enlace para ver todos los beneficios disponibles, reservar y canjear:\n\n` +
-        `👉 ${link}\n\n` +
-        `_Enlace válido por 1 hora._`,
+      if (!bizList || bizList.length === 0) {
+        await sendText(from, '🛍️ *Comercios Adheridos*\n\nTodavía no hay comercios activos. ¡Muy pronto se sumarán!', config.token, config.phoneId);
+        await sendBackButton(from, config.token, config.phoneId);
+        return ok();
+      }
+
+      // Mostrar lista interactiva de comercios (máx 10 por limitación de WhatsApp)
+      const rows = bizList.slice(0, 10).map((b: any) => ({
+        id: `SEL_BIZ_${b.id}`,
+        title: b.name.substring(0, 24),
+        desc: (b.categories?.name || 'Comercio Local').substring(0, 72),
+      }));
+
+      await sendListMessage(from, '🛍️ Comercios Adheridos',
+        `¡Hola ${tourist.name}! Estos son los comercios adheridos a Santiago te Premia.\n\nTocá *"Ver Comercios"* para elegir uno y conocer más detalles.`,
+        'Ver Comercios',
+        rows,
         config.token, config.phoneId);
-      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+
+    // --- SELECCIÓN DE COMERCIO (detalle) ---
+    if (text.startsWith('SEL_BIZ_')) {
+      const bizId = text.replace('SEL_BIZ_', '');
+      const { data: biz } = await supabaseAdmin
+        .from('businesses')
+        .select('id, name, description, address, website, phone, whatsapp, benefit_percentage, benefit_conditions, categories ( name )')
+        .eq('id', bizId)
+        .single();
+
+      if (!biz) {
+        await sendText(from, '❌ No se encontró el comercio.', config.token, config.phoneId);
+        await sendBackButton(from, config.token, config.phoneId);
+        return ok();
+      }
+
+      let msg = `🏪 *${biz.name}*\n`;
+      msg += `📂 ${(biz as any).categories?.name || 'Comercio Local'}\n\n`;
+      
+      if (biz.description) {
+        // Limpiar la info de contacto del solicitante si existe
+        const cleanDesc = biz.description.split('--- CONTACTO SOLICITANTE ---')[0].trim();
+        if (cleanDesc) msg += `${cleanDesc}\n\n`;
+      }
+      
+      if (biz.address) msg += `📍 ${biz.address}\n`;
+      if (biz.phone) msg += `📞 ${biz.phone}\n`;
+      if (biz.whatsapp) msg += `💬 WhatsApp: ${biz.whatsapp}\n`;
+      msg += `\n`;
+
+      if (biz.benefit_percentage && biz.benefit_percentage > 0) {
+        msg += `🎁 *${biz.benefit_percentage}% de descuento*\n`;
+      }
+      if (biz.benefit_conditions) {
+        msg += `📋 ${biz.benefit_conditions}\n`;
+      }
+      
+      if (biz.website) {
+        msg += `\n🌐 *Más información:*\n${biz.website.startsWith('http') ? biz.website : 'https://' + biz.website}\n`;
+      }
+
+      msg += `\n_Presentá tu PIN en este comercio para acceder al beneficio._`;
+
+      await sendText(from, msg, config.token, config.phoneId);
+      await sendButtons(from, '¿Qué querés hacer?', 'Podés ver más comercios o volver al menú.',
+        [
+          { id: 'BTN_CATALOGO', title: '🛍️ Ver Más Comercios' },
+          { id: 'BTN_MI_PIN', title: '🔑 Mi PIN' },
+          { id: 'BTN_VOLVER_MENU', title: '⬅️ Menú' },
+        ], config.token, config.phoneId);
       return ok();
     }
 

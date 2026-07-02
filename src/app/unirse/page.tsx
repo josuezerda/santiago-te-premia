@@ -126,10 +126,12 @@ export default function UnirsePage() {
             Recibimos tu solicitud para unirte a <strong>Santiago te Premia</strong>. Nuestro equipo la revisará y te contactaremos pronto para activar tu comercio.
           </p>
           <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '16px', padding: '24px', marginBottom: '32px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.15)' }}>
-            <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.8 }}>
-              📞 Si tenés alguna consulta, contactanos:<br />
-              <strong>turismo@camaracomerciosde.gob.ar</strong>
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', opacity: 0.8 }}>
+              💬 ¿Tenés alguna consulta? Escribinos por WhatsApp:
             </p>
+            <a href="https://wa.me/5493855381804?text=Hola!%20Acabo%20de%20enviar%20la%20solicitud%20para%20unirme%20a%20Santiago%20te%20Premia" target="_blank" style={{ display: 'inline-block', background: '#25D366', color: 'white', padding: '12px 28px', borderRadius: '12px', textDecoration: 'none', fontWeight: 700, fontSize: '0.95rem' }}>
+              📱 Hablar con el Asistente
+            </a>
           </div>
           <Link href="/" style={{ display: 'inline-block', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', color: 'white', padding: '14px 32px', borderRadius: '12px', textDecoration: 'none', fontWeight: 700, fontSize: '1rem' }}>
             Volver al Inicio
