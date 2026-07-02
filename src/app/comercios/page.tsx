@@ -160,7 +160,7 @@ export default function ComerciosPage() {
                           <span>📍</span> <span style={{ flex: 1 }}>{c.address}</span>
                         </p>
                         <div style={{ padding: '10px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.1)', textAlign: 'center' }}>
-                          <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{c.benefit_percentage}% descuento</span>
+                          <span style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '0.85rem' }}>🎁 Beneficios con PIN exclusivo</span>
                         </div>
                       </div>
                     </div>

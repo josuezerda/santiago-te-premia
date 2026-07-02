@@ -318,9 +318,9 @@ export default function Home() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
             gap: '24px',
-            maxWidth: '1000px',
+            maxWidth: '1200px',
             margin: '0 auto',
           }}>
             {loading ? (
@@ -357,15 +357,15 @@ export default function Home() {
                         {c.categories?.name || 'Comercio Local'}
                       </p>
                       <div style={{
-                        padding: '12px',
+                        padding: '10px',
                         background: 'rgba(99, 102, 241, 0.05)',
                         borderRadius: 'var(--radius-md)',
                         border: '1px solid rgba(99, 102, 241, 0.1)',
+                        textAlign: 'center'
                       }}>
-                        <span style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
-                          {c.benefit_percentage}% de descuento
+                        <span style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '0.85rem' }}>
+                          🎁 Beneficios con PIN exclusivo
                         </span>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}> con PIN</span>
                       </div>
                     </div>
                   </div>
@@ -381,14 +381,14 @@ export default function Home() {
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <Link href="/comercios" style={{
               display: 'inline-block',
-              background: 'linear-gradient(135deg, var(--accent-primary), var(--primary))',
+              background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
               color: 'white',
               padding: '16px 36px',
               borderRadius: '12px',
               textDecoration: 'none',
               fontWeight: 700,
               fontSize: '1.05rem',
-              boxShadow: '0 4px 16px rgba(99, 102, 241, 0.25)',
+              boxShadow: '0 4px 16px rgba(245, 158, 11, 0.25)',
               transition: 'transform 0.2s',
             }}>
               🗺️ Ver todos los comercios y beneficios
