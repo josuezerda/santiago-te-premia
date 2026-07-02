@@ -287,7 +287,7 @@ export default function ConfigPage() {
             <div className="form-group">
               <label className="form-label">Enlace de Google Maps</label>
               <input
-                type="url"
+                type="text"
                 name="map_url"
                 className="form-input"
                 placeholder="https://maps.google.com/..."
@@ -309,6 +309,77 @@ export default function ConfigPage() {
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
               Guardar Ubicación
+            </button>
+          </form>
+        </div>
+
+        {/* Redes Sociales y Sitio Web */}
+        <div className="card-static" style={{ alignSelf: 'start' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>📱</span> Redes Sociales y Sitio Web
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+            Agregá tus redes sociales y sitio web para que los turistas puedan seguirte y conocer más sobre tu comercio.
+          </p>
+
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const target = e.target as any;
+            if (!business?.id) return;
+
+            const socialData = {
+              website: target.website.value.trim() ? (target.website.value.trim().startsWith('http') ? target.website.value.trim() : `https://${target.website.value.trim()}`) : '',
+              instagram: target.instagram.value.trim(),
+              facebook: target.facebook.value.trim(),
+              tiktok: target.tiktok.value.trim(),
+              twitter: target.twitter.value.trim(),
+            };
+
+            try {
+              const res = await fetch(`/api/businesses/${business.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(socialData),
+              });
+
+              if (res.ok) {
+                const stored = JSON.parse(localStorage.getItem('stp_business') || '{}');
+                Object.assign(stored, socialData);
+                localStorage.setItem('stp_business', JSON.stringify(stored));
+                setBusiness({ ...business, ...socialData });
+                alert('✅ Redes sociales actualizadas correctamente.');
+              } else {
+                alert('Error al guardar.');
+              }
+            } catch (err) {
+              alert('Error de conexión.');
+            }
+          }}>
+            <div className="form-group">
+              <label className="form-label">🌐 Sitio Web</label>
+              <input type="text" name="website" className="form-input" placeholder="www.tucomercio.com.ar" defaultValue={business?.website || ''} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">📷 Instagram</label>
+              <input type="text" name="instagram" className="form-input" placeholder="https://instagram.com/tucomercio" defaultValue={business?.instagram || ''} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">👍 Facebook</label>
+              <input type="text" name="facebook" className="form-input" placeholder="https://facebook.com/tucomercio" defaultValue={business?.facebook || ''} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">🎵 TikTok</label>
+                <input type="text" name="tiktok" className="form-input" placeholder="https://tiktok.com/@tucomercio" defaultValue={business?.tiktok || ''} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">🐦 X / Twitter</label>
+                <input type="text" name="twitter" className="form-input" placeholder="https://x.com/tucomercio" defaultValue={business?.twitter || ''} />
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+              Guardar Redes Sociales
             </button>
           </form>
         </div>

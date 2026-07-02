@@ -15,6 +15,8 @@ export default function UnirsePage() {
   const [error, setError] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -79,6 +81,35 @@ export default function UnirsePage() {
     setUploadingLogo(false);
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingPhoto(true);
+    setError('');
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Cada imagen no puede superar los 5MB.');
+        continue;
+      }
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          setPhotos(prev => [...prev, data.url]);
+        }
+      } catch (err) {
+        console.error('Error uploading photo:', err);
+      }
+    }
+    setUploadingPhoto(false);
+    e.target.value = '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -96,6 +127,7 @@ export default function UnirsePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          photos,
           benefit_percentage: form.benefit_percentage ? parseFloat(form.benefit_percentage) : 0,
         }),
       });
@@ -243,8 +275,23 @@ export default function UnirsePage() {
               </div>
 
               <div>
-                <label style={labelStyle}>Dirección</label>
+                <label style={labelStyle}>Dirección principal</label>
                 <input style={inputStyle} placeholder="Ej: Av. Belgrano 345, Santiago del Estero" value={form.address} onChange={e => updateField('address', e.target.value)} />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Sucursales / Otras direcciones <span style={{ fontWeight: 400, color: '#94a3b8' }}>(opcional)</span></label>
+                <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} placeholder="Si tenés más de una ubicación, listálas acá. Una por línea.
+Ej: Sucursal Centro: Tucumán 123
+    Sucursal Sur: Av. Roca 456" value={form.description.includes('SUCURSALES:') ? '' : ''} onChange={e => {
+                  // Guardamos las sucursales como parte de la descripción
+                  const mainDesc = form.description.split('\n--- SUCURSALES ---')[0];
+                  if (e.target.value.trim()) {
+                    updateField('description', mainDesc + '\n--- SUCURSALES ---\n' + e.target.value);
+                  } else {
+                    updateField('description', mainDesc);
+                  }
+                }} />
               </div>
 
               <div>
@@ -286,6 +333,32 @@ export default function UnirsePage() {
                   JPG, PNG o WebP. Máximo 5 MB.
                 </p>
               </div>
+            </div>
+
+            {/* Fotos del comercio */}
+            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '8px', color: '#334155' }}>
+                📸 Fotos del Comercio <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.8rem' }}>(opcional, hasta 5 fotos)</span>
+              </h3>
+              <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '12px' }}>
+                Subí fotos de tu local, productos o lo que quieras mostrar a los turistas.
+              </p>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                {photos.map((url, i) => (
+                  <div key={i} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                    <img src={url} alt={`Foto ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button type="button" onClick={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '2px', right: '2px', width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', cursor: 'pointer', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {photos.length < 5 && (
+                <label style={{ display: 'inline-block', cursor: 'pointer', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '8px 16px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
+                  {uploadingPhoto ? '⏳ Subiendo...' : `📷 Agregar Foto${photos.length > 0 ? 's' : ''}`}
+                  <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={{ display: 'none' }} disabled={uploadingPhoto} />
+                </label>
+              )}
             </div>
           </div>
 

@@ -42,6 +42,7 @@ export default function BeneficiosPage() {
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [formSaving, setFormSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -130,7 +131,7 @@ export default function BeneficiosPage() {
     if (!businessId) return;
     setFormSaving(true);
 
-    const { error } = await supabase.from('promotions').insert({
+    const promoData = {
       business_id: businessId,
       title: formData.title,
       type: formData.type,
@@ -139,18 +140,47 @@ export default function BeneficiosPage() {
       start_date: formData.start_date ? new Date(formData.start_date).toISOString() : null,
       end_date: formData.end_date ? new Date(formData.end_date).toISOString() : null,
       is_active: true,
-      description: formData.image_url, // Guardamos la URL en description
+      description: formData.image_url,
       max_uses: formData.max_uses ? Number(formData.max_uses) : null
-    });
+    };
+
+    let error;
+    if (editingId) {
+      // Editar
+      const res = await supabase.from('promotions').update(promoData).eq('id', editingId);
+      error = res.error;
+    } else {
+      // Crear
+      const res = await supabase.from('promotions').insert(promoData);
+      error = res.error;
+    }
 
     if (!error) {
       setShowModal(false);
+      setEditingId(null);
       setFormData({ title: '', type: 'PERCENTAGE', discount_value: '', conditions: '', start_date: '', end_date: '', image_url: '', max_uses: '' });
       fetchBeneficios();
     } else {
-      alert('Error al crear promoción');
+      alert('Error al guardar promoción');
     }
     setFormSaving(false);
+  };
+
+  const handleEditClick = (beneficio: Beneficio) => {
+    // Buscar datos originales en la base
+    const rawBeneficio = beneficio;
+    setEditingId(rawBeneficio.id);
+    setFormData({
+      title: rawBeneficio.title,
+      type: rawBeneficio.type,
+      discount_value: rawBeneficio.value.replace('%', ''),
+      conditions: rawBeneficio.conditions || '',
+      start_date: '',
+      end_date: '',
+      image_url: rawBeneficio.image_url || '',
+      max_uses: rawBeneficio.max_uses ? String(rawBeneficio.max_uses) : '',
+    });
+    setShowModal(true);
   };
 
   if (loading) {
@@ -256,6 +286,7 @@ export default function BeneficiosPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => handleEditClick(beneficio)}>✏️ Editar</button>
                     <button className="btn btn-danger btn-sm" onClick={async () => {
                       if (confirm('¿Eliminar beneficio?')) {
                         await supabase.from('promotions').delete().eq('id', beneficio.id);
@@ -278,11 +309,11 @@ export default function BeneficiosPage() {
 
       {/* New Promotion Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowModal(false); setEditingId(null); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <div className="modal-header">
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 600 }}>Nueva Promoción</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 600 }}>{editingId ? 'Editar Promoción' : 'Nueva Promoción'}</h2>
+              <button className="modal-close" onClick={() => { setShowModal(false); setEditingId(null); }}>✕</button>
             </div>
 
             <form onSubmit={handleCreatePromotion}>
@@ -345,11 +376,11 @@ export default function BeneficiosPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>
+                <button type="button" className="btn btn-outline" onClick={() => { setShowModal(false); setEditingId(null); }}>
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={formSaving}>
-                  {formSaving ? '⏳ Guardando...' : 'Crear Promoción'}
+                  {formSaving ? '⏳ Guardando...' : (editingId ? 'Guardar Cambios' : 'Crear Promoción')}
                 </button>
               </div>
             </form>
