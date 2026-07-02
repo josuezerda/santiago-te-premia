@@ -19,6 +19,7 @@ const categories = ['Todos', 'Gastronomía', 'Perfumería', 'Artesanías', 'Salu
 export default function ComerciosPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [selectedStatus, setSelectedStatus] = useState('Todos');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [comerciosData, setComerciosData] = useState<Comercio[]>([]);
@@ -172,7 +173,8 @@ export default function ComerciosPage() {
   const filtered = comerciosData.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
     const matchCategory = selectedCategory === 'Todos' || c.category === selectedCategory;
-    return matchSearch && matchCategory;
+    const matchStatus = selectedStatus === 'Todos' || c.status === selectedStatus;
+    return matchSearch && matchCategory && matchStatus;
   });
 
   const statusLabels: Record<string, string> = {
@@ -203,15 +205,35 @@ export default function ComerciosPage() {
       </div>
 
       {/* Filters */}
-      <div className="filter-bar">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Buscar comercio..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ maxWidth: '320px' }}
-        />
+      <div className="filter-bar" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Buscar comercio..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ maxWidth: '320px' }}
+          />
+          <div className="pills-row" style={{ margin: 0 }}>
+            {['Todos', 'pending', 'active', 'paused'].map((st) => (
+              <button
+                key={st}
+                className={`pill ${selectedStatus === st ? 'active' : ''}`}
+                onClick={() => setSelectedStatus(st)}
+                style={st === 'pending' && selectedStatus !== 'pending' ? { borderColor: '#3b82f6', color: '#3b82f6' } : {}}
+              >
+                {st === 'Todos' ? 'Todos los Estados' : statusLabels[st]}
+                {st === 'pending' && comerciosData.filter(c => c.status === 'pending').length > 0 && (
+                  <span style={{ marginLeft: '6px', background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '0.75rem' }}>
+                    {comerciosData.filter(c => c.status === 'pending').length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="pills-row">
           {categories.map((cat) => (
             <button

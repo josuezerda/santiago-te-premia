@@ -308,13 +308,13 @@ export default function UnirsePage() {
                 </div>
                 <div>
                   <label style={labelStyle}>Sitio Web</label>
-                  <input style={inputStyle} type="url" placeholder="https://..." value={form.website} onChange={e => updateField('website', e.target.value)} />
+                  <input style={inputStyle} type="text" placeholder="ej: www.tucomercio.com.ar" value={form.website} onChange={e => updateField('website', e.target.value)} />
                 </div>
               </div>
 
               <div>
                 <label style={labelStyle}>Enlace de Google Maps</label>
-                <input style={inputStyle} type="url" placeholder="https://maps.google.com/..." value={form.map_url} onChange={e => updateField('map_url', e.target.value)} />
+                <input style={inputStyle} type="text" placeholder="https://maps.google.com/..." value={form.map_url} onChange={e => updateField('map_url', e.target.value)} />
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.72rem', color: '#94a3b8' }}>
                   Buscá tu comercio en Google Maps → &quot;Compartir&quot; → copiá el enlace y pegalo acá.
                 </p>
