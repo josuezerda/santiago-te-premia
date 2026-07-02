@@ -292,84 +292,52 @@ export default function Home() {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '24px',
-            maxWidth: '900px',
+            maxWidth: '700px',
             margin: '0 auto',
           }}>
-            {/* Marybe Card */}
-            <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
-              <div style={{
-                height: '180px',
-                position: 'relative',
-                overflow: 'hidden',
+            <div className="card" style={{ textAlign: 'center', padding: '48px 32px' }}>
+              <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🏪</div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '12px' }}>
+                ¿Tenés un comercio?
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.6 }}>
+                Unite al programa y empezá a recibir turistas con beneficios exclusivos. Es rápido, simple y 100% gratuito.
+              </p>
+              <Link href="/unirse" style={{
+                display: 'inline-block',
+                background: 'linear-gradient(135deg, var(--accent-primary), var(--primary))',
+                color: 'white',
+                padding: '12px 28px',
+                borderRadius: '10px',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '0.95rem',
               }}>
-                <Image
-                  src="/comercios/marybe.jpeg"
-                  alt="Marybe"
-                  fill
-                  style={{ objectFit: 'cover' }}
-                />
-              </div>
-              <div style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Marybe</h3>
-                  <span className="badge badge-success">Activo</span>
-                </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '12px' }}>
-                  Perfumería y fragancias
-                </p>
-                <div style={{
-                  padding: '12px',
-                  background: 'rgba(99, 102, 241, 0.05)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(99, 102, 241, 0.1)',
-                }}>
-                  <span style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
-                    15% de descuento
-                  </span>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}> en compras con PIN</span>
-                </div>
-              </div>
+                Quiero Unirme →
+              </Link>
             </div>
 
-            {/* Placeholder Cards */}
-            {[
-              { name: 'Café del Centro', cat: 'Gastronomía', discount: '10% de descuento' },
-              { name: 'Artesanías Santiagueñas', cat: 'Artesanías', discount: '20% de descuento' },
-            ].map((c, i) => (
-              <div key={i} className="card" style={{ overflow: 'hidden', padding: 0 }}>
-                <div style={{
-                  height: '180px',
-                  background: `linear-gradient(135deg, var(--bg-elevated), var(--bg-secondary))`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '3rem',
-                  color: 'var(--border-color)',
-                }}>
-                  🏪
-                </div>
-                <div style={{ padding: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>{c.name}</h3>
-                    <span className="badge badge-success">Activo</span>
-                  </div>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '12px' }}>
-                    {c.cat}
-                  </p>
-                  <div style={{
-                    padding: '12px',
-                    background: 'rgba(99, 102, 241, 0.05)',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid rgba(99, 102, 241, 0.1)',
-                  }}>
-                    <span style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '0.9rem' }}>
-                      {c.discount}
-                    </span>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}> en compras con PIN</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <div className="card" style={{ textAlign: 'center', padding: '48px 32px' }}>
+              <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🎁</div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '12px' }}>
+                Próximamente
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.6 }}>
+                Estamos sumando comercios de toda la ciudad. Muy pronto vas a poder disfrutar de decenas de beneficios exclusivos.
+              </p>
+              <span style={{
+                display: 'inline-block',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-secondary)',
+                padding: '10px 24px',
+                borderRadius: '10px',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                border: '1px solid var(--border-color)',
+              }}>
+                🚀 ¡Seguí atento!
+              </span>
+            </div>
           </div>
         </div>
       </section>

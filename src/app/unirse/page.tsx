@@ -322,28 +322,6 @@ export default function UnirsePage() {
             </div>
           </div>
 
-          {/* Sección: Beneficio */}
-          <div style={{ background: 'white', borderRadius: '16px', padding: '28px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '20px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              🎁 Beneficio que Ofrecés
-            </h2>
-
-            <div style={{ display: 'grid', gap: '16px' }}>
-              <div>
-                <label style={labelStyle}>Porcentaje de descuento</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input style={{ ...inputStyle, maxWidth: '100px' }} type="number" min="0" max="100" placeholder="15" value={form.benefit_percentage} onChange={e => updateField('benefit_percentage', e.target.value)} />
-                  <span style={{ fontSize: '1.1rem', fontWeight: 600, color: '#64748b' }}>%</span>
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Condiciones del beneficio</label>
-                <textarea style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} placeholder="Ej: Válido para consumos mayores a $5000. No acumulable con otras promociones. Lunes a viernes." value={form.benefit_conditions} onChange={e => updateField('benefit_conditions', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
           {/* Sección: Persona de Contacto */}
           <div style={{ background: 'white', borderRadius: '16px', padding: '28px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
             <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '8px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
