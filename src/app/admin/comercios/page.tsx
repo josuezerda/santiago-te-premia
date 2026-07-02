@@ -9,7 +9,7 @@ interface Comercio {
   category: string;
   address: string;
   discount: string;
-  status: 'active' | 'paused' | 'suspended';
+  status: 'active' | 'paused' | 'suspended' | 'pending';
   image?: string;
   canjes: number;
 }
@@ -179,6 +179,7 @@ export default function ComerciosPage() {
     active: 'Activo',
     paused: 'Pausado',
     suspended: 'Suspendido',
+    pending: 'Pendiente',
   };
 
   if (loading) {
@@ -279,7 +280,7 @@ export default function ComerciosPage() {
                   <span className={`status-dot ${comercio.status}`} />
                   <span style={{
                     fontSize: '0.8rem',
-                    color: comercio.status === 'active' ? 'var(--success)' : comercio.status === 'paused' ? 'var(--warning)' : 'var(--error)',
+                    color: comercio.status === 'active' ? 'var(--success)' : comercio.status === 'paused' ? 'var(--warning)' : comercio.status === 'pending' ? '#3b82f6' : 'var(--error)',
                     fontWeight: 500,
                   }}>
                     {statusLabels[comercio.status]}
@@ -322,14 +323,42 @@ export default function ComerciosPage() {
                 <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => handleEditClick(comercio)}>
                   ✏️ Editar
                 </button>
-                <button className="btn btn-outline btn-sm" style={{
-                  borderColor: comercio.status === 'active' ? 'var(--warning)' : 'var(--success)',
-                  color: comercio.status === 'active' ? 'var(--warning)' : 'var(--success)',
-                }}>
-                  {comercio.status === 'active' ? '⏸ Pausar' : '▶ Activar'}
-                </button>
+                {comercio.status === 'pending' ? (
+                  <button className="btn btn-sm" style={{ background: 'var(--success)', color: 'white', border: 'none', flex: 1 }} onClick={async () => {
+                    if (!confirm(`¿Aprobar y activar "${comercio.name}"?`)) return;
+                    const res = await fetch(`/api/businesses/${comercio.id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ status: 'ACTIVE' }),
+                    });
+                    if (res.ok) { fetchBusinesses(); }
+                  }}>
+                    ✅ Aprobar
+                  </button>
+                ) : (
+                  <button className="btn btn-outline btn-sm" style={{
+                    borderColor: comercio.status === 'active' ? 'var(--warning)' : 'var(--success)',
+                    color: comercio.status === 'active' ? 'var(--warning)' : 'var(--success)',
+                  }} onClick={async () => {
+                    const newStatus = comercio.status === 'active' ? 'PAUSED' : 'ACTIVE';
+                    const res = await fetch(`/api/businesses/${comercio.id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ status: newStatus }),
+                    });
+                    if (res.ok) { fetchBusinesses(); }
+                  }}>
+                    {comercio.status === 'active' ? '⏸ Pausar' : '▶ Activar'}
+                  </button>
+                )}
                 {comercio.status !== 'suspended' && (
-                  <button className="btn btn-danger btn-sm">
+                  <button className="btn btn-danger btn-sm" onClick={async () => {
+                    if (!confirm(`¿Suspender "${comercio.name}"? El comercio dejará de aparecer en el catálogo.`)) return;
+                    const res = await fetch(`/api/businesses/${comercio.id}`, {
+                      method: 'DELETE',
+                    });
+                    if (res.ok) { fetchBusinesses(); }
+                  }}>
                     ⛔
                   </button>
                 )}
