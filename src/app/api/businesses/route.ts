@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       benefit_conditions,
       can_send_campaigns,
       can_edit_offers,
+      map_url,
       // Datos del usuario de acceso del comercio
       user_email,
       user_password,
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
         status: 'ACTIVE',
         can_send_campaigns: can_send_campaigns || false,
         can_edit_offers: can_edit_offers !== undefined ? can_edit_offers : true,
+        map_url: map_url || null,
       })
       .select()
       .single();

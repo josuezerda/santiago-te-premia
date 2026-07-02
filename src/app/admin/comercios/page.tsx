@@ -31,6 +31,7 @@ export default function ComerciosPage() {
     category_id: '',
     address: '',
     phone: '',
+    map_url: '',
     user_email: '',
     user_password: '',
     validator_phone: '',
@@ -41,7 +42,7 @@ export default function ComerciosPage() {
     const { data, error } = await supabase
       .from('businesses')
       .select(`
-        id, name, address, benefit_percentage, status, logo_url, phone,
+        id, name, address, benefit_percentage, status, logo_url, phone, map_url,
         categories ( id, name )
       `);
 
@@ -55,6 +56,7 @@ export default function ComerciosPage() {
         category_id: b.categories?.id || '',
         address: b.address,
         phone: b.phone || '',
+        map_url: b.map_url || '',
         discount: b.benefit_percentage > 0 ? `${b.benefit_percentage}%` : 'Beneficio',
         status: b.status.toLowerCase() as any,
         image: b.logo_url || undefined,
@@ -77,7 +79,7 @@ export default function ComerciosPage() {
 
   const openCreateModal = () => {
     setEditingId(null);
-    setFormData({ name: '', category_id: '', address: '', phone: '', user_email: '', user_password: '', validator_phone: '', validator_name: '' });
+    setFormData({ name: '', category_id: '', address: '', phone: '', map_url: '', user_email: '', user_password: '', validator_phone: '', validator_name: '' });
     setShowModal(true);
   };
 
@@ -88,6 +90,7 @@ export default function ComerciosPage() {
       category_id: (c as any).category_id,
       address: c.address,
       phone: (c as any).phone,
+      map_url: (c as any).map_url || '',
       user_email: '',
       user_password: '',
       validator_phone: '',
@@ -102,6 +105,7 @@ export default function ComerciosPage() {
         setFormData(prev => ({
           ...prev,
           user_email: data.data.user_email || '',
+          map_url: data.data.map_url || '',
         }));
       }
     } catch (e) {
@@ -125,6 +129,7 @@ export default function ComerciosPage() {
         category_id: formData.category_id,
         address: formData.address,
         phone: formData.phone,
+        map_url: formData.map_url || null,
         user_name: formData.name,
       };
 
@@ -377,6 +382,12 @@ export default function ComerciosPage() {
               <div className="form-group">
                 <label className="form-label">Teléfono / WhatsApp</label>
                 <input className="form-input" placeholder="+54 385 ..." value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Enlace de Google Maps</label>
+                <input className="form-input" type="url" placeholder="https://maps.google.com/..." value={formData.map_url} onChange={(e) => setFormData({...formData, map_url: e.target.value})} />
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '4px' }}>Buscá el comercio en Google Maps, tocá &quot;Compartir&quot; y pegá el enlace acá.</p>
               </div>
 
               {/* Separador: Acceso al Dashboard */}

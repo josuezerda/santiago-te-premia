@@ -21,6 +21,8 @@ interface Business {
   id: string;
   name: string;
   logo: string;
+  address: string;
+  map_url: string;
   category: string;
   promotions: Promotion[];
 }
@@ -164,6 +166,35 @@ export default function CatalogClient({ tourist }: { tourist: Tourist }) {
                     <span style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 8px', borderRadius: '12px', color: '#64748b', fontWeight: 500 }}>{biz.category}</span>
                   </div>
                 </div>
+
+                {/* Address + Map Link */}
+                {biz.address && (
+                  <div style={{ padding: '0 16px 12px 16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.82rem', color: '#64748b' }}>📍 {biz.address}</span>
+                    {biz.map_url && (
+                      <a
+                        href={biz.map_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: '0.75rem',
+                          color: '#fff',
+                          background: '#4285F4',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          textDecoration: 'none',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        🗺️ Ver en mapa
+                      </a>
+                    )}
+                  </div>
+                )}
                 
                 <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {biz.promotions.map(promo => (
