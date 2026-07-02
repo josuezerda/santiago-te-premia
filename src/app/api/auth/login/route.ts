@@ -68,7 +68,7 @@ async function buildLoginResponse(user: any) {
   if (user.business_id) {
     const { data: biz } = await supabaseAdmin
       .from('businesses')
-      .select('id, name, trade_name, address, status, logo_url, categories ( name )')
+      .select('id, name, trade_name, address, status, logo_url, map_url, categories ( name )')
       .eq('id', user.business_id)
       .single();
     business = biz;

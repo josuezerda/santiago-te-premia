@@ -247,6 +247,72 @@ export default function ConfigPage() {
           </form>
         </div>
 
+        {/* Enlace Google Maps */}
+        <div className="card-static" style={{ alignSelf: 'start' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>🗺️</span> Ubicación en Google Maps
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+            Agregá el enlace de Google Maps de tu comercio para que los turistas puedan encontrarte fácilmente desde el catálogo.
+          </p>
+
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const target = e.target as any;
+            const mapUrl = target.map_url.value.trim();
+
+            if (!business?.id) return;
+
+            try {
+              const res = await fetch(`/api/businesses/${business.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ map_url: mapUrl || null }),
+              });
+              const data = await res.json();
+
+              if (res.ok) {
+                const stored = JSON.parse(localStorage.getItem('stp_business') || '{}');
+                stored.map_url = mapUrl;
+                localStorage.setItem('stp_business', JSON.stringify(stored));
+                setBusiness({ ...business, map_url: mapUrl });
+                alert('✅ Ubicación guardada correctamente.');
+              } else {
+                alert(data.error || 'Error al guardar la ubicación.');
+              }
+            } catch (err) {
+              alert('Error de conexión.');
+            }
+          }}>
+            <div className="form-group">
+              <label className="form-label">Enlace de Google Maps</label>
+              <input
+                type="url"
+                name="map_url"
+                className="form-input"
+                placeholder="https://maps.google.com/..."
+                defaultValue={business?.map_url || ''}
+              />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
+                Buscá tu comercio en Google Maps → tocá &quot;Compartir&quot; → copiá el enlace y pegalo acá.
+              </span>
+            </div>
+
+            {business?.map_url && (
+              <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 600 }}>✅ Enlace configurado</span>
+                <a href={business.map_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '0.8rem', color: 'var(--accent-primary)', marginTop: '4px', wordBreak: 'break-all' }}>
+                  {business.map_url.length > 60 ? business.map_url.substring(0, 60) + '...' : business.map_url}
+                </a>
+              </div>
+            )}
+
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+              Guardar Ubicación
+            </button>
+          </form>
+        </div>
+
       </div>
     </div>
   );
