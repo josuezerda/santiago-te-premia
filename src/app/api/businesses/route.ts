@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { geocodeAddress } from '@/lib/geocode';
+import { getCoordinates } from '@/lib/geocode';
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,15 +68,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Geocodificar dirección
+    // Geocodificar: primero intenta desde map_url, luego desde dirección
     let lat = null;
     let lng = null;
-    if (address?.trim()) {
-      const coords = await geocodeAddress(address.trim());
-      if (coords) {
-        lat = coords.lat;
-        lng = coords.lng;
-      }
+    const coords = await getCoordinates(address?.trim(), map_url?.trim());
+    if (coords) {
+      lat = coords.lat;
+      lng = coords.lng;
     }
 
     // 1. Crear el comercio

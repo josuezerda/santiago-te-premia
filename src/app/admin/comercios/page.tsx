@@ -341,7 +341,7 @@ export default function ComerciosPage() {
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => handleEditClick(comercio)}>
                   ✏️ Editar
                 </button>
@@ -373,17 +373,15 @@ export default function ComerciosPage() {
                     {comercio.status === 'active' ? '⏸ Pausar' : '▶ Activar'}
                   </button>
                 )}
-                {comercio.status !== 'suspended' && (
-                  <button className="btn btn-danger btn-sm" onClick={async () => {
-                    if (!confirm(`¿Suspender "${comercio.name}"? El comercio dejará de aparecer en el catálogo.`)) return;
-                    const res = await fetch(`/api/businesses/${comercio.id}`, {
-                      method: 'DELETE',
-                    });
-                    if (res.ok) { fetchBusinesses(); }
-                  }}>
-                    ⛔
-                  </button>
-                )}
+                <button className="btn btn-danger btn-sm" onClick={async () => {
+                  if (!confirm(`¿ELIMINAR "${comercio.name}" permanentemente? Esta acción no se puede deshacer.`)) return;
+                  const res = await fetch(`/api/businesses/${comercio.id}?hard=true`, {
+                    method: 'DELETE',
+                  });
+                  if (res.ok) { fetchBusinesses(); }
+                }}>
+                  🗑️
+                </button>
               </div>
             </div>
           </div>

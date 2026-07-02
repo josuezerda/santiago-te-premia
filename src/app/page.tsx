@@ -434,6 +434,9 @@ export default function Home() {
           <p style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
             © 2026 Cámara de Comercio de Santiago del Estero. Todos los derechos reservados.
           </p>
+          <p style={{ color: '#94a3b8', fontSize: '0.65rem', marginTop: '8px' }}>
+            Creado por O Sistema, desarrollado por <a href="https://instagram.com/josuezerda" target="_blank" style={{ color: '#94a3b8', textDecoration: 'underline' }}>Josué Zerda</a>
+          </p>
         </div>
       </footer>
 

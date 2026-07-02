@@ -143,6 +143,9 @@ export default function DashboardLayout({
             <span style={{ fontSize: '1rem' }}>🚪</span>
             <span>Cerrar Sesión</span>
           </Link>
+          <p style={{ fontSize: '0.55rem', color: '#64748b', textAlign: 'center', marginTop: '12px', lineHeight: 1.4 }}>
+            Creado por O Sistema<br />desarrollado por <a href="https://instagram.com/josuezerda" target="_blank" style={{ color: '#64748b', textDecoration: 'underline' }}>Josué Zerda</a>
+          </p>
         </div>
       </aside>
 

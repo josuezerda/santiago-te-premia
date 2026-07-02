@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import type { ApiResponse, Business } from '@/lib/types';
 import bcrypt from 'bcryptjs';
-import { geocodeAddress } from '@/lib/geocode';
+import { getCoordinates } from '@/lib/geocode';
 
 export async function GET(
   request: NextRequest,
@@ -53,9 +53,12 @@ export async function PUT(
 
     const { user_email, user_password, user_name, ...businessData } = body;
 
-    // Geocodificar dirección si fue modificada
-    if (businessData.address && typeof businessData.address === 'string') {
-      const coords = await geocodeAddress(businessData.address.trim());
+    // Geocodificar si se modificó la dirección o el map_url
+    if (businessData.address || businessData.map_url) {
+      const coords = await getCoordinates(
+        businessData.address?.trim() || undefined,
+        businessData.map_url?.trim() || undefined
+      );
       if (coords) {
         businessData.lat = coords.lat;
         businessData.lng = coords.lng;
@@ -110,6 +113,20 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const hard = searchParams.get('hard') === 'true';
+
+    if (hard) {
+      // Hard delete: eliminar usuarios asociados y luego el comercio
+      await supabaseAdmin.from('users').delete().eq('business_id', id);
+      const { error } = await supabaseAdmin.from('businesses').delete().eq('id', id);
+      if (error) throw error;
+
+      return NextResponse.json<ApiResponse>(
+        { success: true, message: 'Comercio eliminado permanentemente' },
+        { status: 200 }
+      );
+    }
 
     // Soft delete: cambiar status a SUSPENDED
     const { data, error } = await supabaseAdmin
@@ -122,15 +139,11 @@ export async function DELETE(
     if (error) throw error;
 
     return NextResponse.json<ApiResponse>(
-      {
-        success: true,
-        message: 'Comercio suspendido exitosamente',
-        data,
-      },
+      { success: true, message: 'Comercio suspendido exitosamente', data },
       { status: 200 }
     );
   } catch (error) {
-    console.error('[Businesses] Error al suspender comercio:', error);
+    console.error('[Businesses] Error:', error);
     return NextResponse.json<ApiResponse>(
       { success: false, error: 'Error interno del servidor' },
       { status: 500 }
