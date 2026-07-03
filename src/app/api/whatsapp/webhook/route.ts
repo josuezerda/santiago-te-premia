@@ -182,6 +182,99 @@ async function sendBackButton(to: string, token: string, phoneId: string, extraT
 }
 
 // ============================================================
+// Parsear ubicación de texto libre → { province, country }
+// ============================================================
+function parseOrigin(text: string): { province: string; country: string } {
+  const input = text.trim();
+  const lower = input.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Provincias argentinas con variantes comunes
+  const provinces: Record<string, string> = {
+    'buenos aires': 'Buenos Aires', 'bsas': 'Buenos Aires', 'bs as': 'Buenos Aires', 'pba': 'Buenos Aires', 'gba': 'Buenos Aires',
+    'caba': 'CABA', 'capital federal': 'CABA', 'capital': 'CABA', 'ciudad de buenos aires': 'CABA', 'ciudad autonoma': 'CABA',
+    'catamarca': 'Catamarca', 'san fernando del valle de catamarca': 'Catamarca',
+    'chaco': 'Chaco', 'resistencia': 'Chaco',
+    'chubut': 'Chubut', 'rawson': 'Chubut', 'comodoro rivadavia': 'Chubut', 'trelew': 'Chubut',
+    'cordoba': 'Córdoba', 'cba': 'Córdoba',
+    'corrientes': 'Corrientes',
+    'entre rios': 'Entre Ríos', 'parana': 'Entre Ríos',
+    'formosa': 'Formosa',
+    'jujuy': 'Jujuy', 'san salvador de jujuy': 'Jujuy',
+    'la pampa': 'La Pampa', 'santa rosa': 'La Pampa',
+    'la rioja': 'La Rioja',
+    'mendoza': 'Mendoza', 'mza': 'Mendoza',
+    'misiones': 'Misiones', 'posadas': 'Misiones',
+    'neuquen': 'Neuquén',
+    'rio negro': 'Río Negro', 'viedma': 'Río Negro', 'bariloche': 'Río Negro',
+    'salta': 'Salta',
+    'san juan': 'San Juan',
+    'san luis': 'San Luis',
+    'santa cruz': 'Santa Cruz',
+    'santa fe': 'Santa Fe', 'rosario': 'Santa Fe',
+    'santiago del estero': 'Santiago del Estero', 'sde': 'Santiago del Estero', 'santiago': 'Santiago del Estero', 'sgo del estero': 'Santiago del Estero',
+    'tierra del fuego': 'Tierra del Fuego', 'ushuaia': 'Tierra del Fuego',
+    'tucuman': 'Tucumán', 'san miguel de tucuman': 'Tucumán', 'tuc': 'Tucumán',
+  };
+
+  // Países conocidos
+  const countries: Record<string, string> = {
+    'argentina': 'Argentina', 'arg': 'Argentina',
+    'brasil': 'Brasil', 'brazil': 'Brasil',
+    'chile': 'Chile',
+    'uruguay': 'Uruguay',
+    'paraguay': 'Paraguay',
+    'bolivia': 'Bolivia',
+    'peru': 'Perú',
+    'colombia': 'Colombia',
+    'mexico': 'México',
+    'estados unidos': 'Estados Unidos', 'usa': 'Estados Unidos', 'eeuu': 'Estados Unidos',
+    'espana': 'España', 'spain': 'España',
+    'italia': 'Italia', 'italy': 'Italia',
+    'francia': 'Francia', 'france': 'Francia',
+    'alemania': 'Alemania', 'germany': 'Alemania',
+    'canada': 'Canadá',
+    'venezuela': 'Venezuela',
+    'ecuador': 'Ecuador',
+  };
+
+  // Separar por comas o guiones
+  const parts = input.split(/[,\-–]+/).map(p => p.trim());
+  let province = '';
+  let country = 'Argentina'; // Default
+
+  for (const part of parts) {
+    const partLower = part.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    // Buscar país
+    for (const [key, val] of Object.entries(countries)) {
+      if (partLower === key || partLower.includes(key)) {
+        country = val;
+        break;
+      }
+    }
+
+    // Buscar provincia
+    if (!province) {
+      for (const [key, val] of Object.entries(provinces)) {
+        if (partLower === key || partLower.includes(key)) {
+          province = val;
+          break;
+        }
+      }
+    }
+  }
+
+  // Si no encontramos provincia, usar el texto original como ubicación
+  if (!province) {
+    // Capitalizar cada palabra
+    province = input.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    // Si no matcheó ninguna provincia argentina pero tampoco detectamos país, dejamos Argentina por default
+  }
+
+  return { province, country };
+}
+
+// ============================================================
 // GET - Verificación del webhook (Meta)
 // ============================================================
 export async function GET(request: NextRequest) {
@@ -272,7 +365,7 @@ export async function POST(request: NextRequest) {
         `🎉 *¡Bienvenid@ a Santiago te Premia!*\n\n` +
         (poi ? `📍 Te registrás desde: *${poi.name}*\n\n` : (sourceName ? `🏨 Te registrás desde: *${sourceName.replace('HOTEL_', 'Hotel ').replace('PUNTO_', '').replace(/_/g, ' ')}*\n\n` : '')) +
         `Vamos a crearte tu cuenta para que accedas a beneficios exclusivos en los comercios de Santiago del Estero.\n\n` +
-        `📝 *¿Cuál es tu nombre?*`,
+        `📝 *¿Cuál es tu nombre completo?*\n_(Nombre y apellido)_`,
         config.token, config.phoneId);
       return ok();
     }
@@ -283,28 +376,36 @@ export async function POST(request: NextRequest) {
     // ==========================================================
     const convState = await getState(from);
 
-    // --- Paso 1: NOMBRE ---
+    // --- Paso 1: NOMBRE COMPLETO ---
     if (convState.state === 'REG_NAME') {
-      const name = text.trim();
-      if (!name || name.length < 2) {
-        await sendText(from, '⚠️ Por favor ingresá un nombre válido (mínimo 2 letras).', config.token, config.phoneId);
+      const fullName = text.trim();
+      if (!fullName || fullName.length < 3) {
+        await sendText(from, '⚠️ Por favor ingresá tu nombre completo (nombre y apellido).', config.token, config.phoneId);
         return ok();
       }
-      await setState(from, 'REG_LASTNAME', { ...convState.data, name });
-      await sendText(from, `✅ *${name}*, perfecto.\n\n📝 *¿Cuál es tu apellido?*`, config.token, config.phoneId);
+      // Separar nombre y apellido automáticamente
+      const parts = fullName.split(/\s+/);
+      const firstName = parts[0];
+      const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
+
+      await setState(from, 'REG_DNI', { ...convState.data, name: firstName, last_name: lastName, full_name: fullName });
+      await sendText(from,
+        `✅ *${fullName}*, ¡encantado!\n\n` +
+        `📝 *¿Cuál es tu número de DNI?*\n_(Solo números, ej: 35456789)_`,
+        config.token, config.phoneId);
       return ok();
     }
 
-    // --- Paso 2: APELLIDO ---
-    if (convState.state === 'REG_LASTNAME') {
-      const lastName = text.trim();
-      if (!lastName || lastName.length < 2) {
-        await sendText(from, '⚠️ Por favor ingresá un apellido válido.', config.token, config.phoneId);
+    // --- Paso 2: DNI ---
+    if (convState.state === 'REG_DNI') {
+      const dni = text.trim().replace(/\./g, '').replace(/-/g, '').replace(/\s/g, '');
+      if (!dni || dni.length < 6 || !/^\d+$/.test(dni)) {
+        await sendText(from, '⚠️ Ingresá un DNI válido (solo números, mínimo 6 dígitos).\nEjemplo: 35456789', config.token, config.phoneId);
         return ok();
       }
-      await setState(from, 'REG_BIRTHDATE', { ...convState.data, last_name: lastName });
+      await setState(from, 'REG_BIRTHDATE', { ...convState.data, dni });
       await sendText(from,
-        `✅ ${convState.data.name} *${lastName}*, ¡encantado!\n\n` +
+        `✅ DNI registrado.\n\n` +
         `📝 *¿Cuál es tu fecha de nacimiento?*\n_(Formato: DD/MM/AAAA, ej: 15/03/1990)_`,
         config.token, config.phoneId);
       return ok();
@@ -318,39 +419,24 @@ export async function POST(request: NextRequest) {
         await sendText(from, '⚠️ Formato incorrecto. Usá *DD/MM/AAAA*\nEjemplo: 15/03/1990', config.token, config.phoneId);
         return ok();
       }
-      await setState(from, 'REG_PROVINCE', { ...convState.data, birth_date: dateStr });
-      // Ofrecer provincias principales como lista para no escribir
-      await sendListMessage(from, '📍 Provincia de Origen',
-        `✅ Anotado.\n\n¿De qué provincia sos?`,
-        'Elegir provincia',
-        [
-          { id: 'PROV_Buenos Aires', title: 'Buenos Aires' },
-          { id: 'PROV_CABA', title: 'CABA' },
-          { id: 'PROV_Catamarca', title: 'Catamarca' },
-          { id: 'PROV_Córdoba', title: 'Córdoba' },
-          { id: 'PROV_Corrientes', title: 'Corrientes' },
-          { id: 'PROV_Chaco', title: 'Chaco' },
-          { id: 'PROV_Entre Ríos', title: 'Entre Ríos' },
-          { id: 'PROV_Mendoza', title: 'Mendoza' },
-          { id: 'PROV_Santa Fe', title: 'Santa Fe' },
-          { id: 'PROV_Tucumán', title: 'Tucumán' },
-        ], config.token, config.phoneId);
-      // También damos opción de escribir si la suya no está en la lista
-      await sendText(from, '_Si tu provincia no aparece en la lista, escribila directamente._', config.token, config.phoneId);
+      await setState(from, 'REG_ORIGIN', { ...convState.data, birth_date: dateStr });
+      await sendText(from,
+        `✅ Anotado.\n\n` +
+        `📝 *¿De dónde sos?*\nEscribí tu ciudad, provincia o país.\n_(Ej: "Córdoba", "Buenos Aires, Argentina", "São Paulo, Brasil")_`,
+        config.token, config.phoneId);
       return ok();
     }
 
-    // --- Paso 4: PROVINCIA (botón de lista o texto) ---
-    if (convState.state === 'REG_PROVINCE') {
-      let province = text.trim();
-      // Si viene de un botón de lista: "PROV_Buenos Aires" → "Buenos Aires"
-      if (province.startsWith('PROV_')) {
-        province = province.replace('PROV_', '');
-      }
-      if (!province || province.length < 2) {
-        await sendText(from, '⚠️ Por favor indicá tu provincia.', config.token, config.phoneId);
+    // --- Paso 4: DE DÓNDE ES (texto libre → parseado) ---
+    if (convState.state === 'REG_ORIGIN') {
+      const originText = text.trim();
+      if (!originText || originText.length < 2) {
+        await sendText(from, '⚠️ Por favor indicá de dónde sos.', config.token, config.phoneId);
         return ok();
       }
+
+      // Parsear ubicación del texto libre
+      const parsed = parseOrigin(originText);
 
       const d = convState.data;
       const pinSecret = generatePinSecret();
@@ -367,9 +453,10 @@ export async function POST(request: NextRequest) {
         phone: from,
         name: d.name,
         last_name: d.last_name,
+        dni: d.dni || '',
         birth_date: birthDate,
-        province,
-        country: 'Argentina',
+        province: parsed.province,
+        country: parsed.country,
         poi_id: d.poi_id,
         pin_secret: pinSecret,
         is_subscribed: true,
@@ -388,10 +475,13 @@ export async function POST(request: NextRequest) {
       const pin = getCurrentPin(pinSecret, config.pinExp);
       const remaining = getTimeRemaining(config.pinExp);
 
+      const originDisplay = parsed.province + (parsed.country !== 'Argentina' ? `, ${parsed.country}` : '');
+
       await sendText(from,
         `🎉 *¡Registro completado!*\n\n` +
         `👤 *${d.name} ${d.last_name}*\n` +
-        `📍 ${province}\n` +
+        `🪪 DNI: ${d.dni}\n` +
+        `📍 ${originDisplay}\n` +
         (d.poi_name ? `🏨 ${d.poi_name}\n` : '') +
         `\n` +
         `🔑 Tu PIN actual: *${pin}*\n` +
@@ -596,6 +686,21 @@ export async function POST(request: NextRequest) {
 
     // Verificar si es validador
     const validator = await getValidatorBusiness(from);
+
+    // --- REGISTRO DIRECTO (sin QR) ---
+    if (text === 'BTN_REGISTRARME') {
+      const existing = await getTourist(from);
+      if (existing) {
+        await sendMainMenu(from, existing.name || '', config.token, config.phoneId);
+      } else {
+        await setState(from, 'REG_NAME', { poi_id: null, poi_name: '', registration_source: 'DIRECTO' });
+        await sendText(from,
+          `🎉 *¡Genial! Vamos a registrarte.*\n\n` +
+          `📝 *¿Cuál es tu nombre completo?*\n_(Nombre y apellido)_`,
+          config.token, config.phoneId);
+      }
+      return ok();
+    }
 
     // --- VOLVER AL MENÚ ---
     if (text === 'BTN_VOLVER_MENU' || lower === 'menu' || lower === 'menú' || lower === 'hola' || lower === 'hi' || lower === 'buenas') {
@@ -936,11 +1041,13 @@ export async function POST(request: NextRequest) {
       if (tourist) {
         await sendMainMenu(from, tourist.name || '', config.token, config.phoneId);
       } else {
-        await sendText(from,
+        await sendButtons(from, '🏆 Santiago te Premia',
           `👋 *¡Hola! Soy el asistente de Santiago te Premia*\n\n` +
           `Para empezar a disfrutar de beneficios exclusivos en los comercios de Santiago del Estero, necesitás registrarte.\n\n` +
-          `📱 Escaneá el código QR que encontrarás en hoteles y puntos turísticos de la ciudad para registrarte.`,
-          config.token, config.phoneId);
+          `¡Es rápido! Solo necesitamos tu nombre, DNI, fecha de nacimiento y de dónde sos.`,
+          [
+            { id: 'BTN_REGISTRARME', title: '📝 Registrarme' },
+          ], config.token, config.phoneId);
       }
     }
 
