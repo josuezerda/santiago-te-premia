@@ -63,16 +63,32 @@ export default function LoginPage() {
         maxWidth: '420px',
         animation: 'fadeIn 0.3s ease-out',
       }}>
-        {/* Logo */}
+        {/* Logos */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <Link href="/">
-            <Image
-              src="/logo-camara.png"
-              alt="Cámara de Comercio de Santiago del Estero"
-              width={400}
-              height={200}
-              style={{ width: 'auto', height: '80px', objectFit: 'contain', marginBottom: '16px' }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <Image
+                src="/logo-santiago.jpeg"
+                alt="Santiago del Estero"
+                width={200}
+                height={100}
+                style={{ width: 'auto', height: '60px', objectFit: 'contain', mixBlendMode: 'multiply' }}
+              />
+              <Image
+                src="/logo-cavytse.png"
+                alt="CAVYTSE"
+                width={200}
+                height={100}
+                style={{ width: 'auto', height: '65px', objectFit: 'contain' }}
+              />
+              <Image
+                src="/logo-camara.png"
+                alt="Cámara de Comercio de Santiago del Estero"
+                width={200}
+                height={100}
+                style={{ width: 'auto', height: '55px', objectFit: 'contain' }}
+              />
+            </div>
           </Link>
           <h1 style={{
             fontSize: '1.5rem',

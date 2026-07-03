@@ -65,15 +65,29 @@ export default function Home() {
       {/* Public Header */}
       <header className="header" style={{ position: 'relative', zIndex: 50 }}>
         <div className="container header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Image
+              src="/logo-santiago.jpeg"
+              alt="Santiago del Estero"
+              width={200}
+              height={100}
+              style={{ width: 'auto', height: '30px', objectFit: 'contain', mixBlendMode: 'multiply' }}
+            />
+            <Image
+              src="/logo-cavytse.png"
+              alt="CAVYTSE"
+              width={200}
+              height={100}
+              style={{ width: 'auto', height: '32px', objectFit: 'contain' }}
+            />
             <Image
               src="/logo-camara.png"
               alt="Cámara de Comercio"
               width={300}
               height={150}
-              style={{ width: 'auto', height: '40px', objectFit: 'contain' }}
+              style={{ width: 'auto', height: '30px', objectFit: 'contain' }}
             />
-            <span className="logo" style={{ fontSize: '1.2rem', whiteSpace: 'nowrap' }}>Santiago te Premia</span>
+            <span className="logo" style={{ fontSize: '1.2rem', whiteSpace: 'nowrap', marginLeft: '4px' }}>Santiago te Premia</span>
           </div>
           
           {/* Desktop Nav */}
@@ -133,13 +147,29 @@ export default function Home() {
       }}>
         <div className="container">
           <div style={{ marginBottom: '32px' }}>
-            <Image
-              src="/logo-camara.png"
-              alt="Cámara de Comercio de Santiago del Estero"
-              width={600}
-              height={300}
-              style={{ width: 'auto', height: '120px', objectFit: 'contain', marginBottom: '24px' }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
+              <Image
+                src="/logo-santiago.jpeg"
+                alt="Santiago del Estero"
+                width={300}
+                height={150}
+                style={{ width: 'auto', height: '85px', objectFit: 'contain', mixBlendMode: 'multiply' }}
+              />
+              <Image
+                src="/logo-cavytse.png"
+                alt="CAVYTSE"
+                width={300}
+                height={150}
+                style={{ width: 'auto', height: '90px', objectFit: 'contain' }}
+              />
+              <Image
+                src="/logo-camara.png"
+                alt="Cámara de Comercio de Santiago del Estero"
+                width={300}
+                height={150}
+                style={{ width: 'auto', height: '80px', objectFit: 'contain' }}
+              />
+            </div>
           </div>
           <h1 style={{
             fontSize: 'clamp(2.5rem, 5vw, 4rem)',
@@ -404,15 +434,29 @@ export default function Home() {
         background: 'var(--bg-secondary)',
       }}>
         <div className="container" style={{ textAlign: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <Image
+              src="/logo-santiago.jpeg"
+              alt="Santiago del Estero"
+              width={200}
+              height={100}
+              style={{ width: 'auto', height: '40px', objectFit: 'contain', mixBlendMode: 'multiply' }}
+            />
+            <Image
+              src="/logo-cavytse.png"
+              alt="CAVYTSE"
+              width={200}
+              height={100}
+              style={{ width: 'auto', height: '45px', objectFit: 'contain' }}
+            />
             <Image
               src="/logo-camara.png"
               alt="Cámara de Comercio"
               width={200}
               height={100}
-              style={{ width: 'auto', height: '50px', objectFit: 'contain' }}
+              style={{ width: 'auto', height: '40px', objectFit: 'contain' }}
             />
-            <span style={{ fontWeight: 600, fontSize: '1rem' }}>
+            <span style={{ fontWeight: 600, fontSize: '1rem', marginLeft: '8px' }}>
               Cámara de Comercio de Santiago del Estero
             </span>
           </div>
