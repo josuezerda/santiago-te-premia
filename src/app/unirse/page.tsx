@@ -260,8 +260,9 @@ export default function UnirsePage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={labelStyle}>CUIT</label>
-                  <input style={inputStyle} placeholder="20-12345678-9" value={form.cuit} onChange={e => updateField('cuit', e.target.value)} />
+                  <label style={labelStyle}>CUIT *</label>
+                  <input style={inputStyle} placeholder="20-12345678-9" value={form.cuit} onChange={e => updateField('cuit', e.target.value)} required />
+                  <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#64748b' }}>Será tu contraseña para ingresar</p>
                 </div>
                 <div>
                   <label style={labelStyle}>Rubro / Categoría *</label>
@@ -455,8 +456,9 @@ Ej: Sucursal Centro: Tucumán 123
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={labelStyle}>Email</label>
-                  <input style={inputStyle} type="email" placeholder="tu@email.com" value={form.contact_email} onChange={e => updateField('contact_email', e.target.value)} />
+                  <label style={labelStyle}>Email *</label>
+                  <input style={inputStyle} type="email" placeholder="tu@email.com" value={form.contact_email} onChange={e => updateField('contact_email', e.target.value)} required />
+                  <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#64748b' }}>Será tu usuario para ingresar</p>
                 </div>
                 <div>
                   <label style={labelStyle}>Teléfono / WhatsApp *</label>

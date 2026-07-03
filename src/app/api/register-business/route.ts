@@ -35,9 +35,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validaciones básicas
-    if (!name || !category_id || !contact_name || !contact_phone) {
+    if (!name || !category_id || !contact_name || !contact_phone || !contact_email || !cuit) {
       return NextResponse.json(
-        { success: false, error: 'Nombre del comercio, categoría, nombre y teléfono de contacto son requeridos' },
+        { success: false, error: 'Todos los campos obligatorios (*) deben estar completos' },
         { status: 400 }
       );
     }
@@ -110,11 +110,27 @@ export async function POST(request: NextRequest) {
       .update({ description: (description?.trim() || '') + contactInfo })
       .eq('id', business.id);
 
+    // Crear el usuario automáticamente para que puedan ingresar
+    if (contact_email && cuit) {
+      const { error: userErr } = await supabaseAdmin.rpc('create_business_user', {
+        p_email: contact_email.toLowerCase().trim(),
+        p_password: cuit.trim(),
+        p_name: contact_name || name.trim(),
+        p_business_id: business.id,
+      });
+
+      if (userErr) {
+        console.error('[RegisterBusiness] Error creando usuario:', userErr);
+      } else {
+        console.log(`[RegisterBusiness] Usuario creado: ${contact_email}`);
+      }
+    }
+
     console.log(`[RegisterBusiness] Nueva solicitud: ${name} por ${contact_name} (${contact_phone})`);
 
     return NextResponse.json({
       success: true,
-      message: '¡Tu solicitud fue enviada! El equipo de Santiago te Premia la revisará y te contactaremos pronto.',
+      message: '¡Tu solicitud fue enviada! Ya podés ingresar a tu panel con tu email y tu CUIT como contraseña.',
       data: { id: business.id, name: business.name },
     }, { status: 201 });
 
