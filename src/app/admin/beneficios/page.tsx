@@ -20,7 +20,7 @@ export default function AdminBeneficiosPage() {
       const { data, error } = await supabase
         .from('promotions')
         .select(`
-          id, title, type, current_uses, is_active, status,
+          id, title, type, current_uses, is_active,
           businesses ( name )
         `)
         .order('created_at', { ascending: false });
@@ -34,7 +34,7 @@ export default function AdminBeneficiosPage() {
           comercio: b.businesses?.name || 'Desconocido',
           type: b.type,
           canjes: b.current_uses || 0,
-          status: b.is_active && b.status === 'ACTIVE' ? 'Activo' : (!b.is_active ? 'Suspendido' : 'Pausado'),
+          status: b.is_active ? 'Activo' : 'Suspendido',
         }));
         setBeneficios(mapped);
       }

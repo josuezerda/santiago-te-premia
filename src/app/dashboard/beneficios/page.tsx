@@ -95,7 +95,7 @@ export default function BeneficiosPage() {
 
   const toggleActive = async (id: string, currentStatus: boolean) => {
     setBeneficios(prev => prev.map(b => b.id === id ? { ...b, active: !currentStatus } : b));
-    await supabase.from('promotions').update({ is_active: !currentStatus, status: !currentStatus ? 'ACTIVE' : 'PAUSED' }).eq('id', id);
+    await supabase.from('promotions').update({ is_active: !currentStatus }).eq('id', id);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
