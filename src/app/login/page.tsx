@@ -71,7 +71,7 @@ export default function LoginPage() {
               <Image src="/logo-2.png" alt="Logo 2" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain' }} />
               <Image src="/logo-3.png" alt="Logo 3" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain' }} />
               <Image src="/logo-4.png" alt="Logo 4" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain' }} />
-              <Image src="/logo-5.jpeg" alt="Logo 5" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+              <Image src="/logo-5.png" alt="Logo 5" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
             </div>
           </Link>
           <h1 style={{

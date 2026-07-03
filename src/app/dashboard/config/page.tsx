@@ -107,6 +107,116 @@ export default function ConfigPage() {
       </div>
 
       <div style={{ display: 'grid', gap: '24px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+
+        {/* Logo del establecimiento */}
+        <div className="card-static" style={{ alignSelf: 'start' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>🏷️</span> Logo del Establecimiento
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+            Subí el logo de tu negocio. Se mostrará en tu perfil y en el catálogo de comercios.
+          </p>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '20px' }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+              flexShrink: 0,
+              backgroundColor: 'var(--bg-secondary)',
+              border: '2px dashed var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {business?.logo_url ? (
+                <img src={business.logo_url} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '2rem' }}>🏪</span>
+              )}
+            </div>
+            <div style={{ flex: 1 }}>
+              <input
+                type="file"
+                accept="image/*"
+                id="logo-upload"
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !business?.id) return;
+                  if (file.size > 5 * 1024 * 1024) {
+                    alert('La imagen no puede superar los 5MB.');
+                    return;
+                  }
+                  try {
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd });
+                    const uploadData = await uploadRes.json();
+                    if (!uploadRes.ok || !uploadData.url) {
+                      alert('Error al subir la imagen.');
+                      return;
+                    }
+                    const updateRes = await fetch(`/api/businesses/${business.id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ logo_url: uploadData.url }),
+                    });
+                    if (updateRes.ok) {
+                      const stored = JSON.parse(localStorage.getItem('stp_business') || '{}');
+                      stored.logo_url = uploadData.url;
+                      localStorage.setItem('stp_business', JSON.stringify(stored));
+                      setBusiness({ ...business, logo_url: uploadData.url });
+                      alert('✅ Logo actualizado correctamente.');
+                    } else {
+                      alert('Error al guardar el logo.');
+                    }
+                  } catch (err) {
+                    alert('Error de conexión.');
+                  }
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                onClick={() => document.getElementById('logo-upload')?.click()}
+              >
+                {business?.logo_url ? 'Cambiar Logo' : 'Subir Logo'}
+              </button>
+              {business?.logo_url && (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ width: '100%', marginTop: '8px', color: 'var(--error)', borderColor: 'var(--error)' }}
+                  onClick={async () => {
+                    if (!confirm('¿Querés eliminar tu logo?')) return;
+                    try {
+                      const res = await fetch(`/api/businesses/${business.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ logo_url: null }),
+                      });
+                      if (res.ok) {
+                        const stored = JSON.parse(localStorage.getItem('stp_business') || '{}');
+                        stored.logo_url = null;
+                        localStorage.setItem('stp_business', JSON.stringify(stored));
+                        setBusiness({ ...business, logo_url: null });
+                        alert('Logo eliminado.');
+                      }
+                    } catch (err) {
+                      alert('Error de conexión.');
+                    }
+                  }}
+                >
+                  Eliminar Logo
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
         
         {/* Formulario para agregar */}
         <div className="card-static" style={{ alignSelf: 'start' }}>

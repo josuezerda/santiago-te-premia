@@ -4,11 +4,21 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
-const navLinks = [
+// ID de la categoría Hotelería en la BD
+const HOTEL_CATEGORY_ID = 'ce87301d-89e0-4ae7-b2a5-eaab31f3fb5c';
+
+const commerceNavLinks = [
   { href: '/dashboard', label: 'Mi Panel', icon: '📊' },
   { href: '/dashboard/beneficios', label: 'Mis Beneficios', icon: '🎁' },
   { href: '/dashboard/validar', label: 'Validar PIN', icon: '🔑' },
   { href: '/dashboard/historial', label: 'Historial de Canjes', icon: '📋' },
+  { href: '/dashboard/estadisticas', label: 'Estadísticas', icon: '📈' },
+  { href: '/dashboard/config', label: 'Configuración', icon: '⚙️' },
+  { href: '/dashboard/manual', label: 'Manual de Uso', icon: '📖' },
+];
+
+const hotelNavLinks = [
+  { href: '/dashboard', label: 'Mi Panel', icon: '📊' },
   { href: '/dashboard/estadisticas', label: 'Estadísticas', icon: '📈' },
   { href: '/dashboard/config', label: 'Configuración', icon: '⚙️' },
   { href: '/dashboard/manual', label: 'Manual de Uso', icon: '📖' },
@@ -86,12 +96,12 @@ export default function DashboardLayout({
           padding: '0 16px',
           marginBottom: '8px',
         }}>
-          Mi Comercio
+          {business?.category_id === HOTEL_CATEGORY_ID ? 'Mi Hotel' : 'Mi Comercio'}
         </div>
 
         {/* Navigation */}
         <nav className="sidebar-nav">
-          {navLinks.map((link) => (
+          {(business?.category_id === HOTEL_CATEGORY_ID ? hotelNavLinks : commerceNavLinks).map((link) => (
             <Link
               key={link.href}
               href={link.href}
