@@ -709,7 +709,17 @@ export async function POST(request: NextRequest) {
         await sendValidatorMenu(from, bizName, config.token, config.phoneId);
       } else {
         const tourist = await getTourist(from);
-        await sendMainMenu(from, tourist?.name || '', config.token, config.phoneId);
+        if (tourist) {
+          await sendMainMenu(from, tourist.name || '', config.token, config.phoneId);
+        } else {
+          await sendButtons(from, '🏆 Santiago te Premia',
+            `👋 *¡Hola! Soy el asistente de Santiago te Premia*\n\n` +
+            `Para empezar a disfrutar de beneficios exclusivos en los comercios de Santiago del Estero, necesitás registrarte.\n\n` +
+            `¡Es rápido! Solo necesitamos tu nombre, DNI, fecha de nacimiento y de dónde sos.`,
+            [
+              { id: 'BTN_REGISTRARME', title: '📝 Registrarme' },
+            ], config.token, config.phoneId);
+        }
       }
       return ok();
     }
