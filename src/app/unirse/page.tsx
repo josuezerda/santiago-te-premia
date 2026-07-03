@@ -241,10 +241,10 @@ export default function UnirsePage() {
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 20px 60px' }}>
         <form onSubmit={handleSubmit}>
 
-          {/* Sección: Datos del Comercio */}
+          {/* Sección: Datos del Establecimiento */}
           <div style={{ background: 'white', borderRadius: '16px', padding: '28px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
             <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '20px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              🏪 Datos del Comercio
+              🏪 Datos del Establecimiento
             </h2>
 
             <div style={{ display: 'grid', gap: '16px' }}>
