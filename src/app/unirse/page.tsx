@@ -249,13 +249,13 @@ export default function UnirsePage() {
 
             <div style={{ display: 'grid', gap: '16px' }}>
               <div>
-                <label style={labelStyle}>Nombre del Comercio *</label>
-                <input style={inputStyle} placeholder="Ej: Café del Centro" value={form.name} onChange={e => updateField('name', e.target.value)} required />
+                <label style={labelStyle}>Nombre de Fantasía *</label>
+                <input style={inputStyle} placeholder="Ej: Café del Centro" value={form.trade_name} onChange={e => updateField('trade_name', e.target.value)} required />
               </div>
 
               <div>
-                <label style={labelStyle}>Nombre de Fantasía</label>
-                <input style={inputStyle} placeholder="Si es diferente al nombre legal" value={form.trade_name} onChange={e => updateField('trade_name', e.target.value)} />
+                <label style={labelStyle}>Razón Social *</label>
+                <input style={inputStyle} placeholder="Nombre legal de la empresa" value={form.name} onChange={e => updateField('name', e.target.value)} required />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
