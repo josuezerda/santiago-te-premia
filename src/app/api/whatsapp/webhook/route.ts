@@ -295,10 +295,21 @@ export async function GET(request: NextRequest) {
 // POST - Procesar mensajes
 // ============================================================
 export async function POST(request: NextRequest) {
+  let rawBody: any = null;
   try {
-    const body = await request.json();
+    rawBody = await request.json();
+
+    try { await supabaseAdmin.from('webhook_logs').insert({
+      event_type: 'WEBHOOK_RECEIVED',
+      phone: rawBody?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from || 'no-phone',
+      message_text: rawBody?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body || rawBody?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.interactive?.button_reply?.id || 'no-text',
+      raw_body: rawBody,
+    }); } catch(e) {}
+
+    const body = rawBody;
     const value = body?.entry?.[0]?.changes?.[0]?.value;
     if (!value?.messages || value.messages.length === 0) {
+      try { await supabaseAdmin.from('webhook_logs').insert({ event_type: 'NO_MESSAGES', raw_body: body }); } catch(e) {}
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
@@ -1066,6 +1077,11 @@ export async function POST(request: NextRequest) {
     return ok();
   } catch (error) {
     console.error('[WA] Error:', error);
+    try { await supabaseAdmin.from('webhook_logs').insert({
+      event_type: 'ERROR',
+      error: String(error),
+      raw_body: rawBody,
+    }); } catch(e) {}
     return NextResponse.json({ success: true }, { status: 200 });
   }
 }
