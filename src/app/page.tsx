@@ -66,27 +66,11 @@ export default function Home() {
       <header className="header" style={{ position: 'relative', zIndex: 50 }}>
         <div className="container header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Image
-              src="/logo-santiago.jpeg"
-              alt="Santiago del Estero"
-              width={200}
-              height={100}
-              style={{ width: 'auto', height: '30px', objectFit: 'contain', mixBlendMode: 'multiply' }}
-            />
-            <Image
-              src="/logo-cavytse.png"
-              alt="CAVYTSE"
-              width={200}
-              height={100}
-              style={{ width: 'auto', height: '32px', objectFit: 'contain' }}
-            />
-            <Image
-              src="/logo-camara.png"
-              alt="Cámara de Comercio"
-              width={300}
-              height={150}
-              style={{ width: 'auto', height: '30px', objectFit: 'contain' }}
-            />
+            <Image src="/logo-1.png" alt="Logo 1" width={200} height={100} style={{ width: 'auto', height: '30px', objectFit: 'contain' }} />
+            <Image src="/logo-2.png" alt="Logo 2" width={200} height={100} style={{ width: 'auto', height: '30px', objectFit: 'contain' }} />
+            <Image src="/logo-3.png" alt="Logo 3" width={200} height={100} style={{ width: 'auto', height: '30px', objectFit: 'contain' }} />
+            <Image src="/logo-4.png" alt="Logo 4" width={200} height={100} style={{ width: 'auto', height: '30px', objectFit: 'contain' }} />
+            <Image src="/logo-5.jpeg" alt="Logo 5" width={200} height={100} style={{ width: 'auto', height: '30px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
             <span className="logo" style={{ fontSize: '1.2rem', whiteSpace: 'nowrap', marginLeft: '4px' }}>Santiago te Premia</span>
           </div>
           
@@ -148,27 +132,11 @@ export default function Home() {
         <div className="container">
           <div style={{ marginBottom: '32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
-              <Image
-                src="/logo-santiago.jpeg"
-                alt="Santiago del Estero"
-                width={300}
-                height={150}
-                style={{ width: 'auto', height: '85px', objectFit: 'contain', mixBlendMode: 'multiply' }}
-              />
-              <Image
-                src="/logo-cavytse.png"
-                alt="CAVYTSE"
-                width={300}
-                height={150}
-                style={{ width: 'auto', height: '90px', objectFit: 'contain' }}
-              />
-              <Image
-                src="/logo-camara.png"
-                alt="Cámara de Comercio de Santiago del Estero"
-                width={300}
-                height={150}
-                style={{ width: 'auto', height: '80px', objectFit: 'contain' }}
-              />
+              <Image src="/logo-1.png" alt="Logo 1" width={300} height={150} style={{ width: 'auto', height: '60px', objectFit: 'contain' }} />
+              <Image src="/logo-2.png" alt="Logo 2" width={300} height={150} style={{ width: 'auto', height: '60px', objectFit: 'contain' }} />
+              <Image src="/logo-3.png" alt="Logo 3" width={300} height={150} style={{ width: 'auto', height: '60px', objectFit: 'contain' }} />
+              <Image src="/logo-4.png" alt="Logo 4" width={300} height={150} style={{ width: 'auto', height: '60px', objectFit: 'contain' }} />
+              <Image src="/logo-5.jpeg" alt="Logo 5" width={300} height={150} style={{ width: 'auto', height: '60px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
             </div>
           </div>
           <h1 style={{
@@ -435,29 +403,13 @@ export default function Home() {
       }}>
         <div className="container" style={{ textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <Image
-              src="/logo-santiago.jpeg"
-              alt="Santiago del Estero"
-              width={200}
-              height={100}
-              style={{ width: 'auto', height: '40px', objectFit: 'contain', mixBlendMode: 'multiply' }}
-            />
-            <Image
-              src="/logo-cavytse.png"
-              alt="CAVYTSE"
-              width={200}
-              height={100}
-              style={{ width: 'auto', height: '45px', objectFit: 'contain' }}
-            />
-            <Image
-              src="/logo-camara.png"
-              alt="Cámara de Comercio"
-              width={200}
-              height={100}
-              style={{ width: 'auto', height: '40px', objectFit: 'contain' }}
-            />
+            <Image src="/logo-1.png" alt="Logo 1" width={200} height={100} style={{ width: 'auto', height: '40px', objectFit: 'contain' }} />
+            <Image src="/logo-2.png" alt="Logo 2" width={200} height={100} style={{ width: 'auto', height: '40px', objectFit: 'contain' }} />
+            <Image src="/logo-3.png" alt="Logo 3" width={200} height={100} style={{ width: 'auto', height: '40px', objectFit: 'contain' }} />
+            <Image src="/logo-4.png" alt="Logo 4" width={200} height={100} style={{ width: 'auto', height: '40px', objectFit: 'contain' }} />
+            <Image src="/logo-5.jpeg" alt="Logo 5" width={200} height={100} style={{ width: 'auto', height: '40px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
             <span style={{ fontWeight: 600, fontSize: '1rem', marginLeft: '8px' }}>
-              Cámara de Comercio de Santiago del Estero
+              Santiago te Premia
             </span>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '500px', margin: '0 auto 20px', lineHeight: 1.6 }}>

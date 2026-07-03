@@ -66,28 +66,12 @@ export default function LoginPage() {
         {/* Logos */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <Link href="/">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <Image
-                src="/logo-santiago.jpeg"
-                alt="Santiago del Estero"
-                width={200}
-                height={100}
-                style={{ width: 'auto', height: '60px', objectFit: 'contain', mixBlendMode: 'multiply' }}
-              />
-              <Image
-                src="/logo-cavytse.png"
-                alt="CAVYTSE"
-                width={200}
-                height={100}
-                style={{ width: 'auto', height: '65px', objectFit: 'contain' }}
-              />
-              <Image
-                src="/logo-camara.png"
-                alt="Cámara de Comercio de Santiago del Estero"
-                width={200}
-                height={100}
-                style={{ width: 'auto', height: '55px', objectFit: 'contain' }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <Image src="/logo-1.png" alt="Logo 1" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain' }} />
+              <Image src="/logo-2.png" alt="Logo 2" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain' }} />
+              <Image src="/logo-3.png" alt="Logo 3" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain' }} />
+              <Image src="/logo-4.png" alt="Logo 4" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain' }} />
+              <Image src="/logo-5.jpeg" alt="Logo 5" width={200} height={100} style={{ width: 'auto', height: '50px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
             </div>
           </Link>
           <h1 style={{
