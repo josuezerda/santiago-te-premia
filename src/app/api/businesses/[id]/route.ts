@@ -77,20 +77,36 @@ export async function PUT(
 
     // Actualizar usuario si se proveen credenciales
     if (user_email || user_password) {
-      const userUpdatePayload: any = {};
-      if (user_email) userUpdatePayload.email = user_email.toLowerCase().trim();
-      if (user_password) {
-        userUpdatePayload.password_hash = await bcrypt.hash(user_password, 10);
-      }
-      if (user_name) userUpdatePayload.name = user_name;
+      const { data: existingUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('business_id', id)
+        .maybeSingle();
 
-      if (Object.keys(userUpdatePayload).length > 0) {
-        const { error: userErr } = await supabaseAdmin
-          .from('users')
-          .update(userUpdatePayload)
-          .eq('business_id', id);
+      if (existingUser) {
+        const userUpdatePayload: any = {};
+        if (user_email) userUpdatePayload.email = user_email.toLowerCase().trim();
+        if (user_password) {
+          userUpdatePayload.password_hash = await bcrypt.hash(user_password, 10);
+        }
+        if (user_name) userUpdatePayload.name = user_name;
 
-        if (userErr) throw userErr;
+        if (Object.keys(userUpdatePayload).length > 0) {
+          const { error: userErr } = await supabaseAdmin
+            .from('users')
+            .update(userUpdatePayload)
+            .eq('business_id', id);
+
+          if (userErr) throw userErr;
+        }
+      } else if (user_email && user_password) {
+        const { error: createErr } = await supabaseAdmin.rpc('create_business_user', {
+          p_email: user_email.toLowerCase().trim(),
+          p_password: user_password,
+          p_name: user_name || 'Admin',
+          p_business_id: id,
+        });
+        if (createErr) throw createErr;
       }
     }
 
