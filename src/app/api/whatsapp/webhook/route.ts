@@ -10,6 +10,8 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { generatePinSecret, getCurrentPin, getTimeRemaining, validatePin } from '@/lib/pin';
 import { createTouristToken } from '@/lib/jwt';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // Config: leer de DB
 // ============================================================

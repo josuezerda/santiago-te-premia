@@ -295,7 +295,7 @@ Ej: Sucursal Centro: Tucumán 123
               </div>
 
               <div>
-                <label style={labelStyle}>Descripción del comercio</label>
+                <label style={labelStyle}>Descripción del establecimiento</label>
                 <textarea style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} placeholder="Contanos brevemente sobre tu negocio..." value={form.description} onChange={e => updateField('description', e.target.value)} />
               </div>
             </div>
@@ -304,7 +304,7 @@ Ej: Sucursal Centro: Tucumán 123
           {/* Sección: Logo */}
           <div style={{ background: 'white', borderRadius: '16px', padding: '28px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
             <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '20px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              🖼️ Logo del Comercio
+              🖼️ Logo del establecimiento
             </h2>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -335,10 +335,10 @@ Ej: Sucursal Centro: Tucumán 123
               </div>
             </div>
 
-            {/* Fotos del comercio */}
+            {/* Fotos del establecimiento */}
             <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
               <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '8px', color: '#334155' }}>
-                📸 Fotos del Comercio <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.8rem' }}>(opcional, hasta 5 fotos)</span>
+                📸 Fotos del establecimiento <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.8rem' }}>(opcional, hasta 5 fotos)</span>
               </h3>
               <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '12px' }}>
                 Subí fotos de tu local, productos o lo que quieras mostrar a los turistas.
