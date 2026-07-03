@@ -16,7 +16,7 @@ import { createTouristToken } from '@/lib/jwt';
 async function getConfig() {
   const { data } = await supabaseAdmin
     .from('system_settings')
-    .select('whatsapp_api_token, whatsapp_verify_token, whatsapp_phone_number_id, pin_expiration_seconds, welcome_message')
+    .select('whatsapp_api_token, whatsapp_verify_token, whatsapp_phone_number_id, pin_expiration_seconds, welcome_message, campaign_active, campaign_end_date, campaign_end_message')
     .limit(1)
     .single();
   return {
@@ -25,6 +25,9 @@ async function getConfig() {
     phoneId: data?.whatsapp_phone_number_id || process.env.WHATSAPP_PHONE_NUMBER_ID || '',
     pinExp: data?.pin_expiration_seconds || 20,
     welcomeMsg: data?.welcome_message || '¡Bienvenido a Santiago te Premia! 🎉',
+    campaignActive: data?.campaign_active ?? true,
+    campaignEndDate: data?.campaign_end_date || null,
+    campaignEndMessage: data?.campaign_end_message || '¡Gracias por participar en Santiago te Premia! 🎉 La campaña ha finalizado. ¡Esperamos verte pronto!',
   };
 }
 
@@ -216,15 +219,40 @@ export async function POST(request: NextRequest) {
 
     console.log(`[WA] ${from}: "${text}" (type=${msg.type})`);
 
+    // ==========================================================
+    // VERIFICAR SI LA CAMPAÑA ESTÁ ACTIVA
+    // ==========================================================
+    const campaignExpired = config.campaignEndDate && new Date(config.campaignEndDate) < new Date();
+    if (!config.campaignActive || campaignExpired) {
+      await sendText(from, config.campaignEndMessage, config.token, config.phoneId);
+      return ok();
+    }
+
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.visitasantiago.com.ar';
 
     // ==========================================================
-    // 1. REGISTRO DESDE QR (texto: REGISTRO_xxx)
+    // 1. REGISTRO DESDE QR (texto: REGISTRO_xxx o HOTEL_xxx o texto de punto)
     // ==========================================================
-    if (text.startsWith('REGISTRO_')) {
-      const qrId = text.replace('REGISTRO_', '');
-      const { data: poi } = await supabaseAdmin
-        .from('points_of_interest').select('id, name').eq('qr_identifier', qrId).single();
+    // Detectar si el mensaje viene de un QR de hotel/punto turístico
+    const qrSources = ['HOTEL_', 'PUNTO_', 'TERMINAL', 'TURISMO', 'AEROPUERTO'];
+    const isQRSource = text.startsWith('REGISTRO_') || qrSources.some(s => text.toUpperCase().startsWith(s));
+
+    if (isQRSource) {
+      let sourceName = text.toUpperCase().trim();
+      let qrId = '';
+
+      if (text.startsWith('REGISTRO_')) {
+        qrId = text.replace('REGISTRO_', '');
+        sourceName = qrId;
+      }
+
+      // Buscar si es un punto de interés registrado
+      let poi: any = null;
+      if (qrId) {
+        const { data: poiData } = await supabaseAdmin
+          .from('points_of_interest').select('id, name').eq('qr_identifier', qrId).single();
+        poi = poiData;
+      }
 
       // ¿Ya registrado?
       const existing = await getTourist(from);
@@ -239,10 +267,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Nuevo turista → iniciar registro paso a paso
-      await setState(from, 'REG_NAME', { poi_id: poi?.id || null, poi_name: poi?.name || qrId });
+      await setState(from, 'REG_NAME', { poi_id: poi?.id || null, poi_name: poi?.name || sourceName, registration_source: sourceName });
       await sendText(from,
         `🎉 *¡Bienvenid@ a Santiago te Premia!*\n\n` +
-        (poi ? `📍 Te registrás desde: *${poi.name}*\n\n` : '') +
+        (poi ? `📍 Te registrás desde: *${poi.name}*\n\n` : (sourceName ? `🏨 Te registrás desde: *${sourceName.replace('HOTEL_', 'Hotel ').replace('PUNTO_', '').replace(/_/g, ' ')}*\n\n` : '')) +
         `Vamos a crearte tu cuenta para que accedas a beneficios exclusivos en los comercios de Santiago del Estero.\n\n` +
         `📝 *¿Cuál es tu nombre?*`,
         config.token, config.phoneId);
@@ -345,6 +373,7 @@ export async function POST(request: NextRequest) {
         poi_id: d.poi_id,
         pin_secret: pinSecret,
         is_subscribed: true,
+        registration_source: d.registration_source || '',
       });
 
       if (insertErr) {

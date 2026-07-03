@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 
 const tabConfig = [
   { id: 'whatsapp', label: 'WhatsApp API', icon: '💬' },
+  { id: 'campana', label: 'Campaña', icon: '🚦' },
+  { id: 'qr', label: 'QR Hoteles', icon: '🏨' },
   { id: 'pin', label: 'PIN Dinámico', icon: '🔢' },
   { id: 'mensajes', label: 'Mensajes', icon: '📝' },
   { id: 'general', label: 'General', icon: '⚙️' },
@@ -34,6 +36,11 @@ export default function ConfiguracionPage() {
   ];
   const [menuItems, setMenuItems] = useState(defaultMenuItems);
   const [confirmMessage, setConfirmMessage] = useState('');
+  const [campaignActive, setCampaignActive] = useState(true);
+  const [campaignEndDate, setCampaignEndDate] = useState('');
+  const [campaignEndMessage, setCampaignEndMessage] = useState('');
+  const [qrHotelName, setQrHotelName] = useState('');
+  const [qrGenerated, setQrGenerated] = useState('');
 
   // Auto-detect webhook URL
   const webhookUrl = typeof window !== 'undefined'
@@ -71,6 +78,9 @@ export default function ConfiguracionPage() {
             const missing = defaultMenuItems.filter(def => !merged.find((m: any) => m.id === def.id));
             setMenuItems([...merged, ...missing]);
           }
+          setCampaignActive(d.campaign_active ?? true);
+          setCampaignEndDate(d.campaign_end_date ? d.campaign_end_date.split('T')[0] : '');
+          setCampaignEndMessage(d.campaign_end_message || '¡Gracias por participar en Santiago te Premia! 🎉 La campaña ha finalizado. ¡Esperamos verte pronto!');
         }
       } catch (err) {
         console.error('Error loading settings:', err);
@@ -96,6 +106,9 @@ export default function ConfiguracionPage() {
           pin_expiration_seconds: pinExpiration,
           welcome_message: welcomeMessage,
           main_menu_config: { menuItems, confirmMessage },
+          campaign_active: campaignActive,
+          campaign_end_date: campaignEndDate ? new Date(campaignEndDate).toISOString() : null,
+          campaign_end_message: campaignEndMessage,
         }),
       });
       const json = await res.json();
@@ -310,6 +323,139 @@ export default function ConfiguracionPage() {
                 <li>Suscribite al campo <strong>messages</strong></li>
                 <li>¡Listo! El bot ya responde automáticamente 🎉</li>
               </ol>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Campaña Tab */}
+      {activeTab === 'campana' && (
+        <div style={{ animation: 'fadeIn 0.2s ease-out' }}>
+          <div className="two-col-grid" style={{ maxWidth: '900px' }}>
+            <div className="card-static">
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '20px' }}>🚦 Estado de la Campaña</h3>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', padding: '20px', borderRadius: 'var(--radius-md)', background: campaignActive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)', border: `1px solid ${campaignActive ? 'var(--success)' : 'var(--error)'}` }}>
+                <div
+                  className={`toggle ${campaignActive ? 'on' : ''}`}
+                  onClick={() => setCampaignActive(!campaignActive)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="toggle-knob" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '1.1rem', color: campaignActive ? 'var(--success)' : 'var(--error)' }}>
+                    {campaignActive ? '🟢 Campaña ACTIVA' : '🔴 Campaña DESACTIVADA'}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    {campaignActive ? 'El bot de WhatsApp está respondiendo normalmente.' : 'El bot enviará el mensaje de campaña finalizada a todos los que escriban.'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">📅 Fecha de Fin de Campaña (opcional)</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={campaignEndDate}
+                  onChange={(e) => setCampaignEndDate(e.target.value)}
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
+                  Si se llega a esta fecha, el bot se desactiva automáticamente aunque el toggle esté en activo.
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">💬 Mensaje de Campaña Finalizada</label>
+                <textarea
+                  className="form-input"
+                  rows={4}
+                  value={campaignEndMessage}
+                  onChange={(e) => setCampaignEndMessage(e.target.value)}
+                  placeholder="Mensaje que se envía cuando la campaña está desactivada..."
+                />
+              </div>
+
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '16px', lineHeight: 1.5 }}>
+                ⚠️ <strong>Importante:</strong> Para que los cambios se apliquen, tocá el botón <strong>&quot;Guardar Todo&quot;</strong> de arriba a la derecha.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Hoteles Tab */}
+      {activeTab === 'qr' && (
+        <div style={{ animation: 'fadeIn 0.2s ease-out' }}>
+          <div className="two-col-grid" style={{ maxWidth: '900px' }}>
+            <div className="card-static">
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '12px' }}>🏨 Generar QR por Hotel / Punto Turístico</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
+                Cada hotel o punto turístico tiene su propio QR. Todos abren el mismo WhatsApp, pero nos permite saber de dónde vino cada turista.
+              </p>
+
+              <div className="form-group">
+                <label className="form-label">Nombre del Hotel / Punto</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Ej: Hotel Libertador"
+                  value={qrHotelName}
+                  onChange={(e) => setQrHotelName(e.target.value)}
+                />
+              </div>
+
+              <button className="btn btn-primary" style={{ width: '100%', marginBottom: '20px' }} onClick={() => {
+                if (!qrHotelName.trim()) return;
+                const code = 'HOTEL_' + qrHotelName.trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+                const waNumber = waPhoneId ? '549' + waPhoneId.slice(-10) : '5493851234567';
+                const link = `https://wa.me/${waNumber}?text=${encodeURIComponent(code)}`;
+                setQrGenerated(link);
+              }}>
+                Generar Link QR
+              </button>
+
+              {qrGenerated && (
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', padding: '20px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '12px', fontSize: '0.95rem' }}>✅ Link generado para: {qrHotelName}</div>
+
+                  <div style={{ background: 'var(--bg-elevated)', padding: '12px', borderRadius: 'var(--radius-sm)', fontFamily: 'monospace', fontSize: '0.8rem', wordBreak: 'break-all', marginBottom: '12px' }}>
+                    {qrGenerated}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => {
+                      navigator.clipboard.writeText(qrGenerated);
+                    }}>
+                      📋 Copiar Link
+                    </button>
+                    <a href={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrGenerated)}`} target="_blank" className="btn btn-sm" style={{ background: 'var(--accent-primary)', color: 'white', textDecoration: 'none' }}>
+                      📱 Ver QR para imprimir
+                    </a>
+                  </div>
+
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '12px' }}>
+                    Imprimí este QR y colocalo en el hotel/punto. Cuando el turista lo escanee, se abrirá WhatsApp con el código pre-cargado y sabremos que vino de <strong>{qrHotelName}</strong>.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="card-static">
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '12px' }}>📊 ¿Cómo funciona?</h3>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+                <p><strong>1.</strong> Escribís el nombre del hotel (ej: &quot;Hotel Libertador&quot;)</p>
+                <p><strong>2.</strong> Se genera un link de WhatsApp con código único</p>
+                <p><strong>3.</strong> Imprimís el QR y lo ponés en el hotel</p>
+                <p><strong>4.</strong> El turista escanea → se abre WhatsApp → se registra</p>
+                <p><strong>5.</strong> En el panel de turistas podés filtrar por hotel de origen</p>
+              </div>
+
+              <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(99, 102, 241, 0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                <p style={{ fontSize: '0.8rem', color: '#6366f1', margin: 0 }}>
+                  💡 <strong>Tip:</strong> También podés crear QR para terminales, aeropuertos, oficinas de turismo, etc. Solo cambiá el nombre.
+                </p>
+              </div>
             </div>
           </div>
         </div>

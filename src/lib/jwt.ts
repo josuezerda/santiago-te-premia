@@ -8,7 +8,7 @@ export async function createTouristToken(touristId: string, name: string): Promi
   const token = await new SignJWT({ touristId, name })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('1h') // Token expires in 1 hour
+    .setExpirationTime('48h') // Token expires in 48 hours
     .sign(JWT_SECRET);
   return token;
 }
