@@ -4,9 +4,10 @@ import CatalogClient from './CatalogClient';
 export default async function CatalogoPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const token = typeof searchParams.token === 'string' ? searchParams.token : undefined;
+  const resolvedSearchParams = await searchParams;
+  const token = typeof resolvedSearchParams.token === 'string' ? resolvedSearchParams.token : undefined;
 
   if (!token) {
     return (
