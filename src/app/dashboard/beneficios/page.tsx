@@ -12,8 +12,20 @@ interface Beneficio {
   validTo: string;
   uses: number;
   active: boolean;
-  image_url: string;
+  images: string[];
   max_uses?: number;
+}
+
+// Helper: parse images from description field (backward compatible)
+function parseImages(description: string | null): string[] {
+  if (!description) return [];
+  try {
+    const parsed = JSON.parse(description);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+  } catch {}
+  // Legacy: single URL stored as plain string
+  if (description.startsWith('http')) return [description];
+  return [];
 }
 
 const typeBadgeMap: Record<string, { label: string; badge: string }> = {
@@ -37,7 +49,7 @@ export default function BeneficiosPage() {
     conditions: '',
     start_date: '',
     end_date: '',
-    image_url: '',
+    images: [] as string[],
     max_uses: ''
   });
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -81,7 +93,7 @@ export default function BeneficiosPage() {
         validTo: b.end_date ? new Date(b.end_date).toLocaleDateString() : '-',
         uses: b.current_uses || 0,
         active: b.is_active,
-        image_url: b.description || '', // Usamos description para guardar la URL de la imagen
+        images: parseImages(b.description),
         max_uses: b.max_uses,
       }));
       setBeneficios(mapped);
@@ -99,31 +111,33 @@ export default function BeneficiosPage() {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const response = await fetch('/api/upload', { method: 'POST', body: fd });
+        if (!response.ok) throw new Error('Upload failed');
+        const result = await response.json();
+        newUrls.push(result.url);
       }
-
-      const result = await response.json();
-      setFormData(prev => ({ ...prev, image_url: result.url }));
+      setFormData(prev => ({ ...prev, images: [...prev.images, ...newUrls] }));
     } catch (error) {
       console.error('Error al subir imagen:', error);
       alert('Error al subir la imagen. Asegurate de que pese menos de 10MB.');
     } finally {
       setUploadingImage(false);
+      // Reset input
+      e.target.value = '';
     }
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
 
   const handleCreatePromotion = async (e: React.FormEvent) => {
@@ -140,7 +154,7 @@ export default function BeneficiosPage() {
       start_date: formData.start_date ? new Date(formData.start_date).toISOString() : null,
       end_date: formData.end_date ? new Date(formData.end_date).toISOString() : null,
       is_active: true,
-      description: formData.image_url,
+      description: formData.images.length > 0 ? JSON.stringify(formData.images) : '',
       max_uses: formData.max_uses ? Number(formData.max_uses) : null
     };
 
@@ -158,7 +172,7 @@ export default function BeneficiosPage() {
     if (!error) {
       setShowModal(false);
       setEditingId(null);
-      setFormData({ title: '', type: 'PERCENTAGE', discount_value: '', conditions: '', start_date: '', end_date: '', image_url: '', max_uses: '' });
+      setFormData({ title: '', type: 'PERCENTAGE', discount_value: '', conditions: '', start_date: '', end_date: '', images: [], max_uses: '' });
       fetchBeneficios();
     } else {
       alert('Error al guardar promoción');
@@ -177,7 +191,7 @@ export default function BeneficiosPage() {
       conditions: rawBeneficio.conditions || '',
       start_date: '',
       end_date: '',
-      image_url: rawBeneficio.image_url || '',
+      images: rawBeneficio.images || [],
       max_uses: rawBeneficio.max_uses ? String(rawBeneficio.max_uses) : '',
     });
     setShowModal(true);
@@ -226,8 +240,8 @@ export default function BeneficiosPage() {
                 {/* Left Info */}
                 <div style={{ flex: 1, minWidth: '280px' }}>
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '12px' }}>
-                    {beneficio.image_url && (
-                      <img src={beneficio.image_url} alt={beneficio.title} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                    {beneficio.images.length > 0 && (
+                      <img src={beneficio.images[0]} alt={beneficio.title} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
                     )}
                     <div>
                       <h3 style={{ fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -351,16 +365,19 @@ export default function BeneficiosPage() {
                 </div>
                 
                 <div className="form-group">
-                  <label className="form-label">Imagen del Producto (Opcional)</label>
-                  {formData.image_url ? (
-                  <div style={{ marginBottom: '10px', position: 'relative', display: 'inline-block' }}>
-                    <img src={formData.image_url} alt="Vista previa" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px' }} />
-                    <button type="button" onClick={() => setFormData({...formData, image_url: ''})} style={{ position: 'absolute', top: '-10px', right: '-10px', background: 'var(--error)', color: 'white', borderRadius: '50%', width: '24px', height: '24px', border: 'none', cursor: 'pointer' }}>✕</button>
-                  </div>
-                ) : (
-                  <input type="file" accept="image/*" className="form-input" onChange={handleImageUpload} disabled={uploadingImage} style={{ padding: '8px' }} />
-                )}
-                {uploadingImage && <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Subiendo imagen...</p>}
+                  <label className="form-label">Imágenes del Producto ({formData.images.length} subida{formData.images.length !== 1 ? 's' : ''})</label>
+                  {formData.images.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                      {formData.images.map((url, idx) => (
+                        <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
+                          <img src={url} alt={`Imagen ${idx + 1}`} style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '8px' }} />
+                          <button type="button" onClick={() => removeImage(idx)} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--error)', color: 'white', borderRadius: '50%', width: '22px', height: '22px', border: 'none', cursor: 'pointer', fontSize: '0.7rem', lineHeight: '22px' }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" multiple className="form-input" onChange={handleImageUpload} disabled={uploadingImage} style={{ padding: '8px' }} />
+                  {uploadingImage && <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>⏳ Subiendo imagen...</p>}
                 </div>
               </div>
 

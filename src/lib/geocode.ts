@@ -23,10 +23,25 @@ export async function extractCoordsFromMapUrl(mapUrl: string): Promise<{ lat: nu
       return { lat: parseFloat(dMatch[1]), lng: parseFloat(dMatch[2]) };
     }
 
-    // Formato: q=-27.7864587,-64.2608791
+    // Formato: !8m2!3d-27.7864587!4d-64.2608791 (embed / place URLs)
+    const d8mMatch = fullUrl.match(/!8m2!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
+    if (d8mMatch) {
+      return { lat: parseFloat(d8mMatch[1]), lng: parseFloat(d8mMatch[2]) };
+    }
+
+    // Formato: q=-27.7864587,-64.2608791 (coordenadas numéricas)
     const qMatch = fullUrl.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
     if (qMatch) {
       return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) };
+    }
+
+    // Fallback: q= contiene dirección de texto → geocodificar con Nominatim
+    const qTextMatch = fullUrl.match(/[?&]q=([^&]+)/);
+    if (qTextMatch) {
+      const addressText = decodeURIComponent(qTextMatch[1].replace(/\+/g, ' '));
+      console.log('Geocoding text address from q= param:', addressText);
+      const geocoded = await geocodeAddress(addressText);
+      if (geocoded) return geocoded;
     }
 
     return null;

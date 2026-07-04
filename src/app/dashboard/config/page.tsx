@@ -89,9 +89,67 @@ export default function ConfigPage() {
     }
   };
 
+  // === Estado para editar info del comercio ===
+  const [bizInfo, setBizInfo] = useState({
+    trade_name: '', address: '', phone: '', description: '',
+    benefit_percentage: '', benefit_conditions: '', map_url: '',
+  });
+  const [savingBizInfo, setSavingBizInfo] = useState(false);
+  const [bizInfoMsg, setBizInfoMsg] = useState('');
+
+  useEffect(() => {
+    if (business) {
+      setBizInfo({
+        trade_name: business.trade_name || business.name || '',
+        address: business.address || '',
+        phone: business.phone || '',
+        description: (business.description || '').replace(/\n\n--- CONTACTO SOLICITANTE ---[\s\S]*$/, ''),
+        benefit_percentage: business.benefit_percentage ? String(business.benefit_percentage) : '',
+        benefit_conditions: business.benefit_conditions || '',
+        map_url: business.map_url || '',
+      });
+    }
+  }, [business]);
+
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando configuración...</div>;
   }
+
+  const handleSaveBizInfo = async () => {
+    if (!business) return;
+    setSavingBizInfo(true);
+    setBizInfoMsg('');
+    try {
+      const token = localStorage.getItem('stp_token');
+      const res = await fetch(`/api/businesses/${business.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          trade_name: bizInfo.trade_name,
+          address: bizInfo.address,
+          phone: bizInfo.phone,
+          description: bizInfo.description,
+          benefit_percentage: bizInfo.benefit_percentage ? Number(bizInfo.benefit_percentage) : 0,
+          benefit_conditions: bizInfo.benefit_conditions,
+          map_url: bizInfo.map_url,
+        }),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        // Actualizar localStorage
+        const updated = { ...business, ...result.data };
+        localStorage.setItem('stp_business', JSON.stringify(updated));
+        setBusiness(updated);
+        setBizInfoMsg('✅ Cambios guardados correctamente');
+      } else {
+        setBizInfoMsg('❌ Error al guardar los cambios');
+      }
+    } catch {
+      setBizInfoMsg('❌ Error de conexión');
+    }
+    setSavingBizInfo(false);
+    setTimeout(() => setBizInfoMsg(''), 4000);
+  };
 
   return (
     <div className="page-enter">
@@ -101,12 +159,61 @@ export default function ConfigPage() {
             Configuración
           </h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Administrá los números autorizados para validar beneficios.
+            Editá la información de tu comercio y configurá los validadores.
           </p>
         </div>
       </div>
 
       <div style={{ display: 'grid', gap: '24px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+
+        {/* ====== INFORMACIÓN DEL COMERCIO ====== */}
+        <div className="card-static" style={{ gridColumn: '1 / -1' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>🏢</span> Información del Comercio
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+            Editá los datos de tu comercio. Los cambios se reflejarán en el catálogo público.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Nombre Comercial</label>
+              <input className="form-input" value={bizInfo.trade_name} onChange={e => setBizInfo(p => ({ ...p, trade_name: e.target.value }))} placeholder="Nombre visible en el catálogo" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Dirección</label>
+              <input className="form-input" value={bizInfo.address} onChange={e => setBizInfo(p => ({ ...p, address: e.target.value }))} placeholder="Ej: Av. Belgrano Sur 198" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Teléfono</label>
+              <input className="form-input" value={bizInfo.phone} onChange={e => setBizInfo(p => ({ ...p, phone: e.target.value }))} placeholder="Ej: 3854123456" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Enlace Google Maps</label>
+              <input className="form-input" value={bizInfo.map_url} onChange={e => setBizInfo(p => ({ ...p, map_url: e.target.value }))} placeholder="Pegá el enlace de Google Maps de tu local" />
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>📍 Al guardar, se actualizará automáticamente el pin en el mapa público.</p>
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label className="form-label">Descripción del Comercio</label>
+              <textarea className="form-input" rows={3} value={bizInfo.description} onChange={e => setBizInfo(p => ({ ...p, description: e.target.value }))} placeholder="Contá brevemente qué ofrece tu comercio" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Porcentaje de Beneficio (%)</label>
+              <input className="form-input" type="number" min="0" max="100" value={bizInfo.benefit_percentage} onChange={e => setBizInfo(p => ({ ...p, benefit_percentage: e.target.value }))} placeholder="Ej: 15" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Condiciones del Beneficio</label>
+              <textarea className="form-input" rows={2} value={bizInfo.benefit_conditions} onChange={e => setBizInfo(p => ({ ...p, benefit_conditions: e.target.value }))} placeholder="Ej: Válido solo pago en efectivo" />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '20px' }}>
+            <button className="btn btn-primary" onClick={handleSaveBizInfo} disabled={savingBizInfo}>
+              {savingBizInfo ? '⏳ Guardando...' : '💾 Guardar Cambios'}
+            </button>
+            {bizInfoMsg && <span style={{ fontSize: '0.9rem' }}>{bizInfoMsg}</span>}
+          </div>
+        </div>
 
         {/* Logo del establecimiento */}
         <div className="card-static" style={{ alignSelf: 'start' }}>
