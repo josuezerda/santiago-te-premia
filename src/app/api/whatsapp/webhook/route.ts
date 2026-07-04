@@ -131,32 +131,26 @@ async function getTourist(phone: string) {
 }
 
 // ============================================================
-// MENÚ PRINCIPAL TURISTA (botones)
+// MENÚ PRINCIPAL TURISTA (lista desplegable única)
 // ============================================================
 async function sendMainMenu(to: string, name: string, token: string, phoneId: string) {
-  await sendButtons(to, '🏆 Santiago te Premia',
-    `¡Hola${name ? ' ' + name : ''}! ¿Qué querés hacer?`,
+  await sendListMessage(to, '🏆 Santiago te Premia',
+    `¡Hola${name ? ' ' + name : ''}! 🎉\nBienvenido al programa de beneficios turísticos de Santiago del Estero.\n\nElegí una opción del menú:`,
+    '📋 Menú Principal',
     [
-      { id: 'BTN_MI_PIN', title: '🔑 Mi PIN' },
-      { id: 'BTN_CATALOGO', title: '🛍️ Ver Beneficios' },
-      { id: 'BTN_MAS_OPCIONES', title: '📋 Más Opciones' },
+      { id: 'BTN_MI_PERFIL', title: '👤 Mi Perfil', desc: 'Ver tus datos personales' },
+      { id: 'BTN_MI_PIN', title: '🔑 Mi PIN', desc: 'Ver tu PIN actual para canjes' },
+      { id: 'BTN_CATALOGO', title: '🛍️ Beneficios', desc: 'Catálogo de descuentos disponibles' },
+      { id: 'BTN_RECORRIDO', title: '🗺️ Recorrido Turístico', desc: 'Lugares para visitar en Santiago' },
+      { id: 'BTN_MIS_CANJES', title: '📜 Mis Canjes', desc: 'Historial de beneficios canjeados' },
+      { id: 'BTN_FAQ', title: '❓ Ayuda / FAQ', desc: 'Preguntas frecuentes' },
+      { id: 'BTN_PREMIO_FINAL', title: '🎁 Premio Final', desc: 'Info sobre el premio del programa' },
     ], token, phoneId);
 }
 
-// ============================================================
-// SUBMENÚ "MÁS OPCIONES" (lista con más items)
-// ============================================================
+// Alias para mantener compatibilidad
 async function sendMoreOptionsMenu(to: string, token: string, phoneId: string) {
-  await sendListMessage(to, '📋 Más Opciones',
-    'Elegí una opción del menú:',
-    'Ver opciones',
-    [
-      { id: 'BTN_MIS_CANJES', title: '📜 Mis Canjes', desc: 'Historial de beneficios canjeados' },
-      { id: 'BTN_MI_PERFIL', title: '👤 Mi Perfil', desc: 'Ver tus datos y PIN' },
-      { id: 'BTN_FAQ', title: '❓ Ayuda / FAQ', desc: 'Preguntas frecuentes' },
-      { id: 'BTN_SUSCRIPCION', title: '🔔 Suscripción', desc: 'Activar o desactivar notificaciones' },
-      { id: 'BTN_VOLVER_MENU', title: '⬅️ Volver al Menú', desc: 'Menú principal' },
-    ], token, phoneId);
+  await sendMainMenu(to, '', token, phoneId);
 }
 
 // ============================================================
@@ -176,11 +170,10 @@ async function sendValidatorMenu(to: string, businessName: string, token: string
 // BOTÓN "Volver al Menú" rápido
 // ============================================================
 async function sendBackButton(to: string, token: string, phoneId: string, extraText?: string) {
-  await sendButtons(to, '🏆 Santiago te Premia',
-    extraText || '¿Querés hacer algo más?',
-    [
-      { id: 'BTN_VOLVER_MENU', title: '⬅️ Volver al Menú' },
-    ], token, phoneId);
+  if (extraText) {
+    await sendText(to, extraText, token, phoneId);
+  }
+  await sendMainMenu(to, '', token, phoneId);
 }
 
 // ============================================================
@@ -1022,16 +1015,52 @@ export async function POST(request: NextRequest) {
       await sendText(from,
         `❓ *Preguntas Frecuentes*\n\n` +
         `*1. ¿Cómo canjeo un beneficio?*\n` +
-        `Abrí el "Catálogo", elegí el beneficio y tocá "Reservar". Tenés 1 hora para ir al local. Ahí mostrá tu PIN y listo.\n\n` +
+        `Abrí "Beneficios" en el menú, elegí el que te guste y tocá "Reservar". Tenés 1 hora para ir al local. Ahí mostrá tu PIN y listo.\n\n` +
         `*2. ¿Qué pasa si la reserva expira?*\n` +
         `Se cancela automáticamente y el beneficio vuelve a estar disponible.\n\n` +
         `*3. ¿Cómo veo mis canjes?*\n` +
-        `Tocá "Más Opciones" → "Mis Canjes".\n\n` +
+        `Tocá "Mis Canjes" en el menú principal.\n\n` +
         `*4. ¿Se me olvidó el PIN?*\n` +
         `Tocá "Mi PIN" en el menú y se genera uno nuevo al instante.\n\n` +
         `*5. ¿Tengo que pagar algo?*\n` +
         `No, Santiago te Premia es 100% gratuito para turistas.\n\n` +
         `📧 turismo@camaracomerciosde.gob.ar`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+
+    // --- RECORRIDO TURÍSTICO ---
+    if (text === 'BTN_RECORRIDO') {
+      await sendText(from,
+        `🗺️ *Recorrido Turístico*\n\n` +
+        `Santiago del Estero te espera con increíbles destinos:\n\n` +
+        `🏛️ *Centro Histórico*\n` +
+        `Catedral Basílica, Plaza Libertad, Casa de Gobierno\n\n` +
+        `🌳 *Parque Aguirre*\n` +
+        `El pulmón verde de la ciudad\n\n` +
+        `🏊 *Termas de Río Hondo*\n` +
+        `Aguas termales y relax a 65km\n\n` +
+        `⛰️ *Dique Los Quiroga*\n` +
+        `Naturaleza y aventura\n\n` +
+        `🎭 *Patio del Indio Froilán*\n` +
+        `Folclore y tradición santiagueña\n\n` +
+        `📍 Visitá nuestro sitio web para más info:\nhttps://www.visitasantiago.com.ar`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+
+    // --- PREMIO FINAL ---
+    if (text === 'BTN_PREMIO_FINAL') {
+      await sendText(from,
+        `🎁 *Premio Final - Santiago te Premia*\n\n` +
+        `¡Cuantos más beneficios canjees, más chances tenés de ganar!\n\n` +
+        `🏆 Al finalizar la campaña, sortearemos premios increíbles entre todos los participantes.\n\n` +
+        `📊 *¿Cómo sumo puntos?*\n` +
+        `• Cada beneficio canjeado = 1 punto\n` +
+        `• Mientras más canjes, más oportunidades\n\n` +
+        `🗓️ El sorteo se realizará al finalizar la campaña. ¡Seguí canjeando y sumando chances!`,
         config.token, config.phoneId);
       await sendBackButton(from, config.token, config.phoneId);
       return ok();
