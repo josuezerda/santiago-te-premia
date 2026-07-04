@@ -131,12 +131,22 @@ async function getTourist(phone: string) {
 }
 
 // ============================================================
-// MENÚ PRINCIPAL TURISTA (lista desplegable única)
+// BIENVENIDA (solo primera vez o después de 1h de inactividad)
 // ============================================================
-async function sendMainMenu(to: string, name: string, token: string, phoneId: string) {
+async function sendWelcome(to: string, name: string, token: string, phoneId: string) {
+  await sendText(to,
+    `¡Hola${name ? ' ' + name : ''}! 🎉\nBienvenido al programa de beneficios turísticos de Santiago del Estero.\n\n¡Disfrutá de descuentos exclusivos en comercios adheridos! 🏆`,
+    token, phoneId);
+  await sendOptionsMenu(to, token, phoneId);
+}
+
+// ============================================================
+// MENÚ PRINCIPAL (sin bienvenida, solo opciones)
+// ============================================================
+async function sendOptionsMenu(to: string, token: string, phoneId: string) {
   await sendListMessage(to, '🏆 Santiago te Premia',
-    `¡Hola${name ? ' ' + name : ''}! 🎉\nBienvenido al programa de beneficios turísticos de Santiago del Estero.\n\nElegí una opción del menú:`,
-    '📋 Menú Principal',
+    'Elegí una opción del menú:',
+    '📋 Ver opciones',
     [
       { id: 'BTN_MI_PERFIL', title: '👤 Mi Perfil', desc: 'Ver tus datos personales' },
       { id: 'BTN_MI_PIN', title: '🔑 Mi PIN', desc: 'Ver tu PIN actual para canjes' },
@@ -148,9 +158,14 @@ async function sendMainMenu(to: string, name: string, token: string, phoneId: st
     ], token, phoneId);
 }
 
+// Alias legacy
+async function sendMainMenu(to: string, name: string, token: string, phoneId: string) {
+  await sendWelcome(to, name, token, phoneId);
+}
+
 // Alias para mantener compatibilidad
 async function sendMoreOptionsMenu(to: string, token: string, phoneId: string) {
-  await sendMainMenu(to, '', token, phoneId);
+  await sendOptionsMenu(to, token, phoneId);
 }
 
 // ============================================================
@@ -167,13 +182,10 @@ async function sendValidatorMenu(to: string, businessName: string, token: string
 }
 
 // ============================================================
-// BOTÓN "Volver al Menú" rápido
+// BOTÓN "Volver al Menú" rápido (solo opciones, sin bienvenida)
 // ============================================================
-async function sendBackButton(to: string, token: string, phoneId: string, extraText?: string) {
-  if (extraText) {
-    await sendText(to, extraText, token, phoneId);
-  }
-  await sendMainMenu(to, '', token, phoneId);
+async function sendBackButton(to: string, token: string, phoneId: string, _extraText?: string) {
+  await sendOptionsMenu(to, token, phoneId);
 }
 
 // ============================================================
@@ -361,7 +373,7 @@ export async function POST(request: NextRequest) {
         await sendText(from,
           `👋 *¡Hola de nuevo, ${existing.name}!*\n\nYa estás registrad@ en Santiago te Premia.\n\nTu PIN actual: *${pin}*\n⏱ Se renueva en ${remaining}s\n\nMostrá este PIN en los comercios adheridos para acceder a tus beneficios.`,
           config.token, config.phoneId);
-        await sendMainMenu(from, existing.name || '', config.token, config.phoneId);
+        await sendOptionsMenu(from, config.token, config.phoneId);
         return ok();
       }
 
@@ -708,7 +720,7 @@ export async function POST(request: NextRequest) {
       return ok();
     }
 
-    // --- VOLVER AL MENÚ ---
+    // --- VOLVER AL MENÚ / HOLA ---
     if (text === 'BTN_VOLVER_MENU' || lower === 'menu' || lower === 'menú' || lower === 'hola' || lower === 'hi' || lower === 'buenas') {
       if (validator) {
         const bizName = (validator as any).businesses?.name || 'Tu Comercio';
@@ -716,7 +728,22 @@ export async function POST(request: NextRequest) {
       } else {
         const tourist = await getTourist(from);
         if (tourist) {
-          await sendMainMenu(from, tourist.name || '', config.token, config.phoneId);
+          // Verificar si la última interacción fue hace más de 1 hora
+          const convState = await getState(from);
+          const lastInteraction = convState?.data?.last_interaction ? new Date(convState.data.last_interaction) : null;
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+          const isNewSession = !lastInteraction || lastInteraction < oneHourAgo;
+
+          // Actualizar timestamp de última interacción
+          await setState(from, 'IDLE', { ...convState.data, last_interaction: new Date().toISOString() });
+
+          if (isNewSession && (lower === 'hola' || lower === 'hi' || lower === 'buenas')) {
+            // Primera vez o después de 1h → bienvenida completa
+            await sendWelcome(from, tourist.name || '', config.token, config.phoneId);
+          } else {
+            // Ya está en sesión → solo menú
+            await sendOptionsMenu(from, config.token, config.phoneId);
+          }
         } else {
           await sendButtons(from, '🏆 Santiago te Premia',
             `👋 *¡Hola! Soy el asistente de Santiago te Premia*\n\n` +
@@ -768,31 +795,17 @@ export async function POST(request: NextRequest) {
         return ok();
       }
 
-      // Obtener comercios activos
-      const { data: bizList } = await supabaseAdmin
-        .from('businesses')
-        .select('id, name, categories ( name )')
-        .eq('status', 'ACTIVE')
-        .order('name');
+      // Generar token temporal para el turista
+      const touristToken = await createTouristToken(tourist.id, tourist.name || '');
+      const catalogUrl = `${baseUrl}/catalogo?token=${touristToken}`;
 
-      if (!bizList || bizList.length === 0) {
-        await sendText(from, '🛍️ *Comercios Adheridos*\n\nTodavía no hay comercios activos. ¡Muy pronto se sumarán!', config.token, config.phoneId);
-        await sendBackButton(from, config.token, config.phoneId);
-        return ok();
-      }
-
-      // Mostrar lista interactiva de comercios (máx 10 por limitación de WhatsApp)
-      const rows = bizList.slice(0, 10).map((b: any) => ({
-        id: `SEL_BIZ_${b.id}`,
-        title: b.name.substring(0, 24),
-        desc: (b.categories?.name || 'Comercio Local').substring(0, 72),
-      }));
-
-      await sendListMessage(from, '🛍️ Comercios Adheridos',
-        `¡Hola ${tourist.name}! Estos son los comercios adheridos a Santiago te Premia.\n\nTocá *"Ver Comercios"* para elegir uno y conocer más detalles.`,
-        'Ver Comercios',
-        rows,
+      await sendText(from,
+        `🛍️ *Beneficios Disponibles*\n\n` +
+        `¡${tourist.name}, mirá todos los comercios adheridos y sus descuentos exclusivos!\n\n` +
+        `👉 Tocá el enlace para ver el catálogo completo:\n${catalogUrl}\n\n` +
+        `📱 _Podés buscar por categoría, nombre o ubicación._`,
         config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
       return ok();
     }
 
@@ -876,31 +889,28 @@ export async function POST(request: NextRequest) {
         await sendValidatorMenu(from, bizName, config.token, config.phoneId);
         return ok();
       } else {
-        // Canjes del turista
+        // Canjes del turista → enviar link con token
         const tourist = await getTourist(from);
         if (!tourist) {
           await sendText(from, '❌ No estás registrad@ como turista.', config.token, config.phoneId);
           return ok();
         }
 
-        const { data: canjes } = await supabaseAdmin
-          .from('redemptions')
-          .select('created_at, promotions ( title ), businesses ( name )')
-          .eq('tourist_id', tourist.id)
-          .order('created_at', { ascending: false })
-          .limit(10);
+        const touristToken = await createTouristToken(tourist.id, tourist.name || '');
+        const canjesUrl = `${baseUrl}/mis-canjes?token=${touristToken}`;
 
-        let txt = `📜 *Mis Canjes*\n\n`;
-        if (!canjes || canjes.length === 0) {
-          txt += 'Todavía no canjeaste ningún beneficio.\n\n¡Abrí el catálogo para ver qué beneficios te esperan!';
-        } else {
-          canjes.forEach((c: any, i: number) => {
-            const date = new Date(c.created_at).toLocaleDateString('es-AR');
-            txt += `${i + 1}. 📅 ${date} — ${(c.promotions as any)?.title} en ${(c.businesses as any)?.name}\n`;
-          });
-          txt += `\n*Total: ${canjes.length} canje${canjes.length > 1 ? 's' : ''}*`;
-        }
-        await sendText(from, txt, config.token, config.phoneId);
+        // Contar canjes
+        const { count } = await supabaseAdmin
+          .from('redemptions')
+          .select('id', { count: 'exact', head: true })
+          .eq('tourist_id', tourist.id);
+
+        await sendText(from,
+          `📜 *Mis Canjes*\n\n` +
+          `Tenés *${count || 0}* canjes realizados.\n\n` +
+          `👉 Tocá el enlace para ver tu historial completo:\n${canjesUrl}\n\n` +
+          `📱 _Ahí podés ver todos los detalles de tus beneficios canjeados._`,
+          config.token, config.phoneId);
         await sendBackButton(from, config.token, config.phoneId);
         return ok();
       }
@@ -971,9 +981,7 @@ export async function POST(request: NextRequest) {
         (poiName ? `🏨 Registrado en: ${poiName}\n` : '') +
         `📅 Registrado: ${registDate}\n` +
         `🎁 Canjes realizados: *${count || 0}*\n` +
-        `🔔 Suscripción: ${tourist.is_subscribed ? '✅ Activa' : '❌ Inactiva'}\n\n` +
-        `🔑 PIN actual: *${pin}*\n` +
-        `⏱ Se renueva en ${remaining}s`,
+        `🔔 Suscripción: ${tourist.is_subscribed ? '✅ Activa' : '❌ Inactiva'}`,
         config.token, config.phoneId);
       await sendBackButton(from, config.token, config.phoneId);
       return ok();
@@ -1091,7 +1099,7 @@ export async function POST(request: NextRequest) {
       // Verificar si está registrado
       const tourist = await getTourist(from);
       if (tourist) {
-        await sendMainMenu(from, tourist.name || '', config.token, config.phoneId);
+        await sendOptionsMenu(from, config.token, config.phoneId);
       } else {
         await sendButtons(from, '🏆 Santiago te Premia',
           `👋 *¡Hola! Soy el asistente de Santiago te Premia*\n\n` +
