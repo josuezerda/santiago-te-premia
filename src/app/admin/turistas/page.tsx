@@ -5,8 +5,13 @@ import { supabase } from '@/lib/supabase';
 interface Turista {
   id: string;
   name: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   origin: string;
+  province: string;
+  country: string;
+  birthDate: string;
   hotel: string;
   registrationDate: string;
   canjes: number;
@@ -19,6 +24,9 @@ export default function TuristasPage() {
   const [turistasData, setTuristasData] = useState<Turista[]>([]);
   const [hotels, setHotels] = useState<string[]>(['Todos']);
   const [loading, setLoading] = useState(true);
+  const [editingTourist, setEditingTourist] = useState<Turista | null>(null);
+  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '', province: '', country: '', birthDate: '' });
+  const [saving, setSaving] = useState(false);
 
   // Stats
   const [totalCount, setTotalCount] = useState(0);
@@ -31,7 +39,7 @@ export default function TuristasPage() {
       // Fetch tourists with their POI (hotel) name
       const { data, error } = await supabase
         .from('tourists')
-        .select('id, name, last_name, phone, province, country, created_at, is_subscribed, points_of_interest ( name )')
+        .select('id, name, last_name, phone, province, country, birth_date, created_at, is_subscribed, points_of_interest ( name )')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -57,8 +65,13 @@ export default function TuristasPage() {
           return {
             id: t.id,
             name: fullName,
+            firstName: t.name || '',
+            lastName: t.last_name || '',
             phone: t.phone || '-',
             origin,
+            province: t.province || '',
+            country: t.country || '',
+            birthDate: t.birth_date || '',
             hotel,
             registrationDate,
             canjes: 0, // Will be updated below if redemptions exist
@@ -119,6 +132,69 @@ export default function TuristasPage() {
 
     fetchTuristas();
   }, []);
+
+  async function handleEdit(turista: Turista) {
+    setEditingTourist(turista);
+    setEditForm({
+      firstName: turista.firstName,
+      lastName: turista.lastName,
+      phone: turista.phone,
+      province: turista.province,
+      country: turista.country,
+      birthDate: turista.birthDate,
+    });
+  }
+
+  async function handleSaveEdit() {
+    if (!editingTourist) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/tourists/${editingTourist.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.firstName,
+          last_name: editForm.lastName,
+          phone: editForm.phone,
+          province: editForm.province,
+          country: editForm.country,
+          birth_date: editForm.birthDate,
+        }),
+      });
+      if (res.ok) {
+        setTuristasData(prev => prev.map(t => t.id === editingTourist.id ? {
+          ...t,
+          name: [editForm.firstName, editForm.lastName].filter(Boolean).join(' ') || 'Sin nombre',
+          firstName: editForm.firstName,
+          lastName: editForm.lastName,
+          phone: editForm.phone,
+          province: editForm.province,
+          country: editForm.country,
+          birthDate: editForm.birthDate,
+          origin: editForm.province || editForm.country || '-',
+        } : t));
+        setEditingTourist(null);
+        alert('✅ Turista actualizado correctamente');
+      } else {
+        alert('Error al actualizar');
+      }
+    } catch { alert('Error de conexión'); }
+    setSaving(false);
+  }
+
+  async function handleDelete(turista: Turista) {
+    if (!confirm(`¿Estás seguro de eliminar a ${turista.name}?\n\nEsto le permitirá volver a registrarse por WhatsApp.`)) return;
+    try {
+      const res = await fetch(`/api/tourists/${turista.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setTuristasData(prev => prev.filter(t => t.id !== turista.id));
+        setTotalCount(prev => prev - 1);
+        alert('✅ Turista eliminado. Puede volver a registrarse.');
+      } else {
+        alert('Error al eliminar');
+      }
+    } catch { alert('Error de conexión'); }
+  }
 
   const filtered = turistasData.filter((t) => {
     const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.phone.includes(search);
@@ -201,6 +277,7 @@ export default function TuristasPage() {
               <th>Fecha Registro</th>
               <th>Canjes</th>
               <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -251,6 +328,20 @@ export default function TuristasPage() {
                     </span>
                   </div>
                 </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="btn btn-outline"
+                      style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                      onClick={() => handleEdit(turista)}
+                    >✏️ Editar</button>
+                    <button
+                      className="btn btn-outline"
+                      style={{ padding: '4px 12px', fontSize: '0.8rem', color: 'var(--error)', borderColor: 'var(--error)' }}
+                      onClick={() => handleDelete(turista)}
+                    >🗑️ Borrar</button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -264,6 +355,63 @@ export default function TuristasPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Edición */}
+      {editingTourist && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+        }} onClick={() => setEditingTourist(null)}>
+          <div style={{
+            background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)',
+            padding: '32px', width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '24px' }}>✏️ Editar Turista</h2>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label className="form-label">Nombre</label>
+                  <input className="form-input" value={editForm.firstName}
+                    onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} />
+                </div>
+                <div>
+                  <label className="form-label">Apellido</label>
+                  <input className="form-input" value={editForm.lastName}
+                    onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Teléfono</label>
+                <input className="form-input" value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label className="form-label">Provincia</label>
+                  <input className="form-input" value={editForm.province}
+                    onChange={(e) => setEditForm({ ...editForm, province: e.target.value })} />
+                </div>
+                <div>
+                  <label className="form-label">País</label>
+                  <input className="form-input" value={editForm.country}
+                    onChange={(e) => setEditForm({ ...editForm, country: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Fecha de Nacimiento</label>
+                <input className="form-input" type="date" value={editForm.birthDate}
+                  onChange={(e) => setEditForm({ ...editForm, birthDate: e.target.value })} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline" onClick={() => setEditingTourist(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleSaveEdit} disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
