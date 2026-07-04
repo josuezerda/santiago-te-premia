@@ -12,6 +12,7 @@ export default function UnirsePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [autoApproved, setAutoApproved] = useState(false);
   const [error, setError] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -136,6 +137,7 @@ export default function UnirsePage() {
 
       if (res.ok && data.success) {
         setSubmitted(true);
+        setAutoApproved(data.autoApproved || false);
         window.scrollTo(0, 0);
       } else {
         setError(data.error || 'Error al enviar la solicitud.');
@@ -157,10 +159,21 @@ export default function UnirsePage() {
       <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
         <div style={{ maxWidth: '500px', textAlign: 'center', color: 'white' }}>
           <div style={{ fontSize: '5rem', marginBottom: '24px' }}>🎉</div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '16px' }}>¡Solicitud Enviada!</h1>
-          <p style={{ fontSize: '1.1rem', opacity: 0.9, marginBottom: '32px', lineHeight: 1.6 }}>
-            Recibimos tu solicitud para unirte a <strong>Santiago te Premia</strong>. Nuestro equipo la revisará y te contactaremos pronto para activar tu comercio.
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '16px' }}>
+            {autoApproved ? '✅ ¡Comercio Aprobado!' : '¡Solicitud Enviada!'}
+          </h1>
+          <p style={{ fontSize: '1.1rem', opacity: 0.9, marginBottom: '24px', lineHeight: 1.6 }}>
+            {autoApproved
+              ? <>Tu comercio fue <strong>aprobado automáticamente</strong> porque tu CUIT está en la base de socios activos de la Cámara de Comercio. ¡Ya estás activo en <strong>Santiago te Premia</strong>!</>
+              : <>Recibimos tu solicitud para unirte a <strong>Santiago te Premia</strong>. Nuestro equipo la revisará y te contactaremos pronto para activar tu comercio.</>
+            }
           </p>
+          <div style={{ background: 'rgba(99,102,241,0.2)', borderRadius: '16px', padding: '24px', marginBottom: '24px', border: '1px solid rgba(99,102,241,0.3)' }}>
+            <p style={{ margin: '0 0 8px 0', fontSize: '1rem', fontWeight: 700 }}>🔐 Datos de Acceso a tu Panel</p>
+            <p style={{ margin: '0 0 6px 0', fontSize: '0.9rem', opacity: 0.9 }}>📧 <strong>Email:</strong> El email que registraste</p>
+            <p style={{ margin: '0 0 6px 0', fontSize: '0.9rem', opacity: 0.9 }}>🔑 <strong>Contraseña:</strong> Tu número de CUIT</p>
+            <p style={{ margin: '12px 0 0 0', fontSize: '0.8rem', opacity: 0.7, fontStyle: 'italic' }}>⚠️ Recomendamos que cambies tu contraseña desde tu panel una vez que ingreses.</p>
+          </div>
           <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '16px', padding: '24px', marginBottom: '32px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.15)' }}>
             <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', opacity: 0.8 }}>
               💬 ¿Tenés alguna consulta? Escribinos por WhatsApp:
@@ -499,9 +512,10 @@ Ej: Sucursal Centro: Tucumán 123
             {loading ? '⏳ Enviando solicitud...' : '🚀 Enviar Solicitud de Registro'}
           </button>
 
-          <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.8rem', color: '#94a3b8' }}>
-            Tu solicitud será revisada por el equipo de la Cámara de Comercio. Te contactaremos en las próximas 48 horas hábiles.
-          </p>
+          <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 8px 0' }}>🔐 Al registrarte, tu <strong>contraseña inicial</strong> será tu número de CUIT. Podrás cambiarla desde tu panel.</p>
+            <p style={{ margin: 0 }}>Si tu CUIT está en la base de socios activos, tu comercio se aprobará automáticamente.</p>
+          </div>
         </form>
       </div>
     </div>
