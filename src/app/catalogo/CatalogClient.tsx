@@ -33,6 +33,7 @@ export default function CatalogClient({ tourist }: { tourist: Tourist }) {
   const [loading, setLoading] = useState(true);
   const [activeReservation, setActiveReservation] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Profile & Redemptions data
   const [profileData, setProfileData] = useState<any>(null);
@@ -155,7 +156,29 @@ export default function CatalogClient({ tourist }: { tourist: Tourist }) {
           <div style={{ padding: '0 20px', opacity: activeReservation ? 0.5 : 1, pointerEvents: activeReservation ? 'none' : 'auto' }}>
             <h2 style={{ fontSize: '1.2rem', marginBottom: '16px', color: '#334155' }}>Comercios Adheridos</h2>
             
-            {catalog.map(biz => (
+            <input 
+              type="text" 
+              placeholder="🔍 Buscar por nombre o categoría..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '1px solid var(--border-color)',
+                marginBottom: '24px',
+                fontSize: '1rem',
+                outline: 'none'
+              }}
+            />
+            
+            {catalog
+              .filter(biz => 
+                biz.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                biz.category.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(biz => (
               <div key={biz.id} style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#e2e8f0', overflow: 'hidden', flexShrink: 0 }}>
