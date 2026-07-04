@@ -9,6 +9,7 @@ const navLinks = [
   { href: '/admin/hoteles', label: 'Hoteles / QR', icon: '🏨' },
   { href: '/admin/comercios', label: 'Comercios', icon: '🏪' },
   { href: '/admin/beneficios', label: 'Beneficios', icon: '🎁' },
+  { href: '/admin/recorridos', label: 'Recorridos', icon: '🗺️' },
   { href: '/admin/turistas', label: 'Turistas', icon: '👤' },
   { href: '/admin/canjes', label: 'Canjes', icon: '🔄' },
   { href: '/admin/campanas', label: 'Campañas', icon: '📢' },

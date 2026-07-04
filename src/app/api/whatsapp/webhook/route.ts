@@ -1137,21 +1137,28 @@ export async function POST(request: NextRequest) {
 
     // --- RECORRIDO TURÍSTICO ---
     if (text === 'BTN_RECORRIDO') {
-      await sendText(from,
-        `🗺️ *Recorrido Turístico*\n\n` +
-        `Santiago del Estero te espera con increíbles destinos:\n\n` +
-        `🏛️ *Centro Histórico*\n` +
-        `Catedral Basílica, Plaza Libertad, Casa de Gobierno\n\n` +
-        `🌳 *Parque Aguirre*\n` +
-        `El pulmón verde de la ciudad\n\n` +
-        `🏊 *Termas de Río Hondo*\n` +
-        `Aguas termales y relax a 65km\n\n` +
-        `⛰️ *Dique Los Quiroga*\n` +
-        `Naturaleza y aventura\n\n` +
-        `🎭 *Patio del Indio Froilán*\n` +
-        `Folclore y tradición santiagueña\n\n` +
-        `📍 Visitá nuestro sitio web para más info:\nhttps://www.visitasantiago.com.ar`,
-        config.token, config.phoneId);
+      let toursMessage = `🗺️ *Recorrido Turístico*\n\nSantiago del Estero te espera con increíbles destinos:\n\n`;
+      
+      const { data: tours } = await supabaseAdmin
+        .from('touristic_routes')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (tours && tours.length > 0) {
+        tours.forEach(tour => {
+          toursMessage += `🏛️ *${tour.title}*\n${tour.description}`;
+          if (tour.map_url) {
+            toursMessage += `\n📍 Mapa: ${tour.map_url}`;
+          }
+          toursMessage += `\n\n`;
+        });
+      } else {
+        toursMessage += `_Aún no hay recorridos cargados. ¡Vuelve a consultar pronto!_\n\n`;
+      }
+
+      toursMessage += `━━━━━━━━━━━━━━━━━━━\n*Subsecretaría de Turismo de la provincia de Santiago del Estero*\nAv. Libertad 417 - G4200 - Santiago del Estero República Argentina.\nTel: (+54 9) 0385 4213253 / (+54 9) 0385 4214243\nMail: informes@turismosantiago.gob.ar\n🌐 www.turismosantiago.gob.ar`;
+
+      await sendText(from, toursMessage, config.token, config.phoneId);
       await sendBackButton(from, config.token, config.phoneId);
       return ok();
     }
