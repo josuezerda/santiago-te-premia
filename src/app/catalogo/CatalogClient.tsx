@@ -124,7 +124,7 @@ export default function CatalogClient({ tourist }: { tourist: Tourist }) {
     <div style={{ fontFamily: 'system-ui', maxWidth: '600px', margin: '0 auto', background: '#f8f9fa', minHeight: '100vh', paddingBottom: '80px', position: 'relative' }}>
       
       {/* Header */}
-      <header style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-primary))', color: 'white', padding: '30px 20px', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', marginBottom: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+      <header style={{ background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', color: 'white', padding: '30px 20px', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', marginBottom: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
         <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
           {activeTab === 'CATALOG' && `¡Bienvenido, ${tourist.name}! 👋`}
           {activeTab === 'PROFILE' && 'Mi Perfil'}
@@ -199,9 +199,22 @@ export default function CatalogClient({ tourist }: { tourist: Tourist }) {
                 <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {biz.promotions.map(promo => (
                     <div key={promo.id} style={{ display: 'flex', gap: '12px' }}>
-                      {promo.description && promo.description.startsWith('http') && (
-                        <img src={promo.description} alt={promo.title} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '12px', flexShrink: 0 }} />
-                      )}
+                      {(() => {
+                        let imageUrl = null;
+                        if (promo.description) {
+                          if (promo.description.startsWith('[')) {
+                            try {
+                              const imgs = JSON.parse(promo.description);
+                              if (imgs.length > 0) imageUrl = imgs[0];
+                            } catch (e) {}
+                          } else if (promo.description.startsWith('http')) {
+                            imageUrl = promo.description;
+                          }
+                        }
+                        return imageUrl ? (
+                          <img src={imageUrl} alt={promo.title} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '12px', flexShrink: 0 }} />
+                        ) : null;
+                      })()}
                       <div style={{ flex: 1 }}>
                         <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#0f172a' }}>{promo.title}</h4>
                         <p style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: '#64748b' }}>{promo.conditions}</p>

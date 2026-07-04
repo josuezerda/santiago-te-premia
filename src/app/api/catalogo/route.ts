@@ -15,8 +15,7 @@ export async function GET() {
     const { data: promotions, error: promoError } = await supabaseAdmin
       .from('promotions')
       .select('*')
-      .eq('is_active', true)
-      .eq('status', 'ACTIVE');
+      .eq('is_active', true);
 
     if (promoError || !promotions) throw promoError;
 
