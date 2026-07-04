@@ -65,7 +65,41 @@ export async function POST(request: NextRequest) {
       lng = coords.lng;
     }
 
-    // Crear comercio con estado PENDING
+    // ============================================================
+    // Verificar si el CUIT o razón social está en la lista de socios activos
+    // Si coincide → ACTIVE automáticamente, si no → PENDING
+    // ============================================================
+    let autoApproved = false;
+    const normalizedCuit = (cuit || '').replace(/[-\s]/g, '').trim();
+
+    if (normalizedCuit) {
+      const { data: socioMatch } = await supabaseAdmin
+        .from('socios_activos')
+        .select('id')
+        .eq('cuit', normalizedCuit)
+        .limit(1);
+
+      if (socioMatch && socioMatch.length > 0) {
+        autoApproved = true;
+      }
+    }
+
+    // Si no matcheó por CUIT, intentar por razón social / nombre comercial
+    if (!autoApproved && name) {
+      const { data: socioByName } = await supabaseAdmin
+        .from('socios_activos')
+        .select('id')
+        .or(`comercio.ilike.%${name.trim()}%,propietario.ilike.%${name.trim()}%`)
+        .limit(1);
+
+      if (socioByName && socioByName.length > 0) {
+        autoApproved = true;
+      }
+    }
+
+    const businessStatus = autoApproved ? 'ACTIVE' : 'PENDING';
+
+    // Crear comercio
     const { data: business, error: bizErr } = await supabaseAdmin
       .from('businesses')
       .insert({
@@ -87,7 +121,7 @@ export async function POST(request: NextRequest) {
         benefit_conditions: benefit_conditions?.trim() || '',
         logo_url: logo_url || null,
         photos: photos || [],
-        status: 'PENDING',
+        status: businessStatus,
         lat,
         lng,
         can_send_campaigns: false,
@@ -126,12 +160,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`[RegisterBusiness] Nueva solicitud: ${name} por ${contact_name} (${contact_phone})`);
+    console.log(`[RegisterBusiness] ${autoApproved ? '✅ AUTO-APROBADO' : '⏳ PENDIENTE'}: ${name} por ${contact_name} (${contact_phone})`);
+
+    const successMessage = autoApproved
+      ? '✅ ¡Tu comercio fue aprobado automáticamente! Ya estás activo en Santiago te Premia. Ingresá a tu panel con tu email y tu CUIT como contraseña.'
+      : '¡Tu solicitud fue enviada! Está pendiente de aprobación. Ya podés ingresar a tu panel con tu email y tu CUIT como contraseña.';
 
     return NextResponse.json({
       success: true,
-      message: '¡Tu solicitud fue enviada! Ya podés ingresar a tu panel con tu email y tu CUIT como contraseña.',
-      data: { id: business.id, name: business.name },
+      message: successMessage,
+      autoApproved,
+      data: { id: business.id, name: business.name, status: businessStatus },
     }, { status: 201 });
 
   } catch (error: any) {
