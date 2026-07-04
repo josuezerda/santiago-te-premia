@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getCoordinates } from '@/lib/geocode';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -146,12 +147,17 @@ export async function POST(request: NextRequest) {
 
     // Crear el usuario automáticamente para que puedan ingresar
     if (contact_email && cuit) {
-      const { error: userErr } = await supabaseAdmin.rpc('create_business_user', {
-        p_email: contact_email.toLowerCase().trim(),
-        p_password: cuit.trim(),
-        p_name: contact_name || name.trim(),
-        p_business_id: business.id,
-      });
+      const normalizedPassword = cuit.replace(/[-\s]/g, '').trim();
+      const passwordHash = await bcrypt.hash(normalizedPassword, 10);
+      const { error: userErr } = await supabaseAdmin
+        .from('users')
+        .insert({
+          email: contact_email.toLowerCase().trim(),
+          password_hash: passwordHash,
+          name: contact_name || name.trim(),
+          role: 'BUSINESS',
+          business_id: business.id,
+        });
 
       if (userErr) {
         console.error('[RegisterBusiness] Error creando usuario:', userErr);
