@@ -1020,19 +1020,116 @@ export async function POST(request: NextRequest) {
 
     // --- FAQ / AYUDA ---
     if (text === 'BTN_FAQ' || lower === 'ayuda' || lower === 'preguntas' || lower === 'help') {
+      await sendListMessage(from, '❓ Ayuda / FAQ',
+        'Elegí una pregunta para ver la respuesta:',
+        '📖 Ver Preguntas',
+        [
+          { id: 'FAQ_CANJEAR', title: '🎁 ¿Cómo canjeo?', desc: 'Pasos para canjear un beneficio' },
+          { id: 'FAQ_PIN', title: '🔑 ¿Qué es el PIN?', desc: 'Cómo funciona y cómo obtenerlo' },
+          { id: 'FAQ_CANJES', title: '📜 ¿Dónde veo mis canjes?', desc: 'Historial de beneficios canjeados' },
+          { id: 'FAQ_GRATIS', title: '💰 ¿Es gratis?', desc: '¿Tengo que pagar algo?' },
+          { id: 'FAQ_COMERCIOS', title: '🏪 ¿Dónde canjeo?', desc: 'Cómo encontrar comercios adheridos' },
+          { id: 'FAQ_RESERVA', title: '⏱️ ¿Qué es la reserva?', desc: 'Duración y cancelación' },
+          { id: 'FAQ_PREMIO', title: '🏆 ¿Cómo gano el premio?', desc: 'Info sobre el sorteo final' },
+          { id: 'FAQ_CONTACTO', title: '📧 Contacto', desc: 'Escribinos por cualquier duda' },
+        ], config.token, config.phoneId);
+      return ok();
+    }
+
+    // --- FAQ: Respuestas individuales ---
+    if (text === 'FAQ_CANJEAR') {
       await sendText(from,
-        `❓ *Preguntas Frecuentes*\n\n` +
-        `*1. ¿Cómo canjeo un beneficio?*\n` +
-        `Abrí "Beneficios" en el menú, elegí el que te guste y tocá "Reservar". Tenés 1 hora para ir al local. Ahí mostrá tu PIN y listo.\n\n` +
-        `*2. ¿Qué pasa si la reserva expira?*\n` +
-        `Se cancela automáticamente y el beneficio vuelve a estar disponible.\n\n` +
-        `*3. ¿Cómo veo mis canjes?*\n` +
-        `Tocá "Mis Canjes" en el menú principal.\n\n` +
-        `*4. ¿Se me olvidó el PIN?*\n` +
-        `Tocá "Mi PIN" en el menú y se genera uno nuevo al instante.\n\n` +
-        `*5. ¿Tengo que pagar algo?*\n` +
-        `No, Santiago te Premia es 100% gratuito para turistas.\n\n` +
-        `📧 turismo@camaracomerciosde.gob.ar`,
+        `🎁 *¿Cómo canjeo un beneficio?*\n\n` +
+        `1️⃣ Abrí *"Beneficios"* en el menú\n` +
+        `2️⃣ Tocá el enlace para ver el catálogo de comercios\n` +
+        `3️⃣ Elegí el comercio y el beneficio que te guste\n` +
+        `4️⃣ Andá al local y mostrá tu *PIN* al encargado\n` +
+        `5️⃣ ¡Listo! El descuento se aplica al instante 🎉\n\n` +
+        `💡 _Tu PIN lo encontrás en "Mi PIN" del menú._`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+    if (text === 'FAQ_PIN') {
+      await sendText(from,
+        `🔑 *¿Qué es el PIN?*\n\n` +
+        `Tu PIN es un código de 6 dígitos que se renueva automáticamente cada pocos segundos.\n\n` +
+        `📱 Lo usás para identificarte en el comercio y que te apliquen el descuento.\n\n` +
+        `🔄 Si se vence, simplemente tocá *"Mi PIN"* en el menú para obtener uno nuevo al instante.\n\n` +
+        `🔒 _El PIN es personal y no lo compartas con nadie._`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+    if (text === 'FAQ_CANJES') {
+      await sendText(from,
+        `📜 *¿Dónde veo mis canjes?*\n\n` +
+        `Tocá *"Mis Canjes"* en el menú principal.\n\n` +
+        `Te vamos a enviar un enlace donde podés ver:\n` +
+        `• ✅ Todos tus canjes realizados\n` +
+        `• 📅 Fecha y hora de cada uno\n` +
+        `• 🏪 En qué comercio los hiciste\n` +
+        `• 📊 Estadísticas de tu actividad`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+    if (text === 'FAQ_GRATIS') {
+      await sendText(from,
+        `💰 *¿Es gratis?*\n\n` +
+        `¡Sí! Santiago te Premia es *100% gratuito* para turistas.\n\n` +
+        `✅ Registrarte es gratis\n` +
+        `✅ Usar los beneficios es gratis\n` +
+        `✅ No hay costos ocultos\n\n` +
+        `🎉 _Solo necesitás registrarte y empezar a disfrutar._`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+    if (text === 'FAQ_COMERCIOS') {
+      await sendText(from,
+        `🏪 *¿Dónde puedo canjear beneficios?*\n\n` +
+        `Hay muchos comercios adheridos en Santiago del Estero.\n\n` +
+        `📱 Tocá *"Beneficios"* en el menú para ver el catálogo completo con:\n` +
+        `• 🔍 Buscador por nombre o categoría\n` +
+        `• 📍 Ubicación en el mapa\n` +
+        `• 🏷️ Descuentos disponibles\n\n` +
+        `_Cada comercio muestra su dirección y cómo llegar._`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+    if (text === 'FAQ_RESERVA') {
+      await sendText(from,
+        `⏱️ *¿Qué es la reserva?*\n\n` +
+        `Cuando reservás un beneficio, tenés *1 hora* para ir al comercio y canjearlo.\n\n` +
+        `⚠️ Si no llegás a tiempo, la reserva se cancela automáticamente y el beneficio vuelve a estar disponible.\n\n` +
+        `💡 _Podés volver a reservarlo cuando quieras._`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+    if (text === 'FAQ_PREMIO') {
+      await sendText(from,
+        `🏆 *¿Cómo gano el premio final?*\n\n` +
+        `¡Cuantos más beneficios canjees, más chances tenés!\n\n` +
+        `📊 *¿Cómo sumo puntos?*\n` +
+        `• Cada beneficio canjeado = 1 punto\n` +
+        `• Mientras más canjes, más oportunidades\n\n` +
+        `🗓️ El sorteo se realizará al finalizar la campaña.\n\n` +
+        `🎉 _¡Seguí canjeando y sumando chances!_`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+    if (text === 'FAQ_CONTACTO') {
+      await sendText(from,
+        `📧 *Contacto*\n\n` +
+        `¿Tenés alguna duda que no pudimos resolver?\n\n` +
+        `📧 turismo@camaracomerciosde.gob.ar\n` +
+        `📱 +54 9 385 620-8451\n` +
+        `🌐 www.visitasantiago.com.ar\n\n` +
+        `🏢 Cámara de Comercio e Industria de Santiago del Estero`,
         config.token, config.phoneId);
       await sendBackButton(from, config.token, config.phoneId);
       return ok();

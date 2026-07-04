@@ -78,7 +78,7 @@ export default function Home() {
             <a href="#comercios" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
               Comercios
             </a>
-            <a href="https://wa.me/5493850000000" target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ borderColor: 'var(--success)', color: 'var(--success)' }}>
+            <a href="https://wa.me/5493856208451" target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ borderColor: 'var(--success)', color: 'var(--success)' }}>
               Registrarte
             </a>
             <Link href="/login" className="btn btn-primary">
@@ -107,7 +107,7 @@ export default function Home() {
               Comercios
             </a>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-              <a href="https://wa.me/5493850000000" target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)} className="btn btn-outline" style={{ borderColor: 'var(--success)', color: 'var(--success)', justifyContent: 'center', width: '100%' }}>
+              <a href="https://wa.me/5493856208451" target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)} className="btn btn-outline" style={{ borderColor: 'var(--success)', color: 'var(--success)', justifyContent: 'center', width: '100%' }}>
                 Registrarte vía WhatsApp
               </a>
               <Link href="/login" onClick={() => setIsMenuOpen(false)} className="btn btn-primary" style={{ justifyContent: 'center', width: '100%' }}>
@@ -463,7 +463,7 @@ export default function Home() {
         }
       `}} />
       <a
-        href="https://wa.me/5493850000000?text=Hola,%20quiero%20conocer%20los%20beneficios"
+        href="https://wa.me/5493856208451?text=Hola,%20quiero%20conocer%20los%20beneficios"
         target="_blank"
         rel="noopener noreferrer"
         className="whatsapp-btn"

@@ -25,7 +25,7 @@ export default async function CatalogoPage({
         <h2>⏳ Tu sesión ha expirado</h2>
         <p>Por seguridad, los enlaces del catálogo duran 1 hora.</p>
         <p style={{ marginTop: '20px' }}>Por favor, solicita un nuevo enlace en WhatsApp.</p>
-        <a href="https://wa.me/123456789" style={{ display: 'inline-block', marginTop: '20px', padding: '12px 24px', background: '#25D366', color: 'white', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
+        <a href="https://wa.me/5493856208451" style={{ display: 'inline-block', marginTop: '20px', padding: '12px 24px', background: '#25D366', color: 'white', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
           Volver a WhatsApp
         </a>
       </div>

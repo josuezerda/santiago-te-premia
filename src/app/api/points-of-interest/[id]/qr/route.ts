@@ -15,7 +15,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '5493850000000';
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '5493856208451';
 
     const { data: poi, error } = await supabaseAdmin
       .from('points_of_interest')
