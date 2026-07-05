@@ -46,6 +46,7 @@ export async function PUT(request: NextRequest) {
       'pin_expiration_seconds',
       'welcome_message',
       'main_menu_config',
+      'final_prize_message',
     ];
 
     const updates: Record<string, unknown> = {};

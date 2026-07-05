@@ -39,6 +39,7 @@ export default function ConfiguracionPage() {
   const [campaignActive, setCampaignActive] = useState(true);
   const [campaignEndDate, setCampaignEndDate] = useState('');
   const [campaignEndMessage, setCampaignEndMessage] = useState('');
+  const [finalPrizeMessage, setFinalPrizeMessage] = useState('');
   const [qrHotelName, setQrHotelName] = useState('');
   const [qrGenerated, setQrGenerated] = useState('');
 
@@ -81,6 +82,7 @@ export default function ConfiguracionPage() {
           setCampaignActive(d.campaign_active ?? true);
           setCampaignEndDate(d.campaign_end_date ? d.campaign_end_date.split('T')[0] : '');
           setCampaignEndMessage(d.campaign_end_message || '¡Gracias por participar en Santiago te Premia! 🎉 La campaña ha finalizado. ¡Esperamos verte pronto!');
+          setFinalPrizeMessage(d.final_prize_message || '🏆 Al finalizar la campaña, sortearemos premios increíbles entre todos los participantes.\n\nPara participar solo necesitás usar tus beneficios en los comercios adheridos.');
         }
       } catch (err) {
         console.error('Error loading settings:', err);
@@ -109,6 +111,7 @@ export default function ConfiguracionPage() {
           campaign_active: campaignActive,
           campaign_end_date: campaignEndDate ? new Date(campaignEndDate).toISOString() : null,
           campaign_end_message: campaignEndMessage,
+          final_prize_message: finalPrizeMessage,
         }),
       });
       const json = await res.json();
@@ -567,6 +570,24 @@ export default function ConfiguracionPage() {
                 rows={5}
                 value={welcomeMessage}
                 onChange={(e) => setWelcomeMessage(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="card-static" style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '24px' }}>
+              Mensaje de Premio Final
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
+              Este mensaje se muestra en WhatsApp cuando el turista pide información sobre los sorteos o premio final.
+            </p>
+            <div className="form-group">
+              <label className="form-label">Texto del mensaje</label>
+              <textarea
+                className="form-input"
+                rows={5}
+                value={finalPrizeMessage}
+                onChange={(e) => setFinalPrizeMessage(e.target.value)}
               />
             </div>
           </div>

@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 async function getConfig() {
   const { data } = await supabaseAdmin
     .from('system_settings')
-    .select('whatsapp_api_token, whatsapp_verify_token, whatsapp_phone_number_id, pin_expiration_seconds, welcome_message, campaign_active, campaign_end_date, campaign_end_message')
+    .select('whatsapp_api_token, whatsapp_verify_token, whatsapp_phone_number_id, pin_expiration_seconds, welcome_message, campaign_active, campaign_end_date, campaign_end_message, final_prize_message')
     .limit(1)
     .single();
   return {
@@ -30,6 +30,7 @@ async function getConfig() {
     campaignActive: data?.campaign_active ?? true,
     campaignEndDate: data?.campaign_end_date || null,
     campaignEndMessage: data?.campaign_end_message || '¡Gracias por participar en Santiago te Premia! 🎉 La campaña ha finalizado. ¡Esperamos verte pronto!',
+    finalPrizeMessage: data?.final_prize_message || '🏆 Al finalizar la campaña, sortearemos premios increíbles entre todos los participantes.',
   };
 }
 
@@ -1167,12 +1168,7 @@ export async function POST(request: NextRequest) {
     if (text === 'BTN_PREMIO_FINAL') {
       await sendText(from,
         `🎁 *Premio Final - Santiago te Premia*\n\n` +
-        `¡Cuantos más beneficios canjees, más chances tenés de ganar!\n\n` +
-        `🏆 Al finalizar la campaña, sortearemos premios increíbles entre todos los participantes.\n\n` +
-        `📊 *¿Cómo sumo puntos?*\n` +
-        `• Cada beneficio canjeado = 1 punto\n` +
-        `• Mientras más canjes, más oportunidades\n\n` +
-        `🗓️ El sorteo se realizará al finalizar la campaña. ¡Seguí canjeando y sumando chances!`,
+        `${config.finalPrizeMessage}`,
         config.token, config.phoneId);
       await sendBackButton(from, config.token, config.phoneId);
       return ok();
