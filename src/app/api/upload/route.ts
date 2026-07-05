@@ -14,14 +14,10 @@ export async function POST(request: NextRequest) {
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `promotions/${fileName}`;
 
-    // Read the file as an array buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
     // Upload using supabaseAdmin (Service Role bypasses RLS policies)
     const { error: uploadError } = await supabaseAdmin.storage
       .from('images')
-      .upload(filePath, buffer, {
+      .upload(filePath, file, {
         contentType: file.type,
       });
 
