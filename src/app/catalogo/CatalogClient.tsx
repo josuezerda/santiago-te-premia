@@ -34,6 +34,8 @@ export default function CatalogClient({ tourist }: { tourist: Tourist }) {
   const [activeReservation, setActiveReservation] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
+
   
   // Profile & Redemptions data
   const [profileData, setProfileData] = useState<any>(null);
@@ -158,7 +160,7 @@ export default function CatalogClient({ tourist }: { tourist: Tourist }) {
             
             <input 
               type="text" 
-              placeholder="🔍 Buscar por nombre o categoría..." 
+              placeholder="🔍 Buscar comercio..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -166,17 +168,45 @@ export default function CatalogClient({ tourist }: { tourist: Tourist }) {
                 padding: '12px 16px',
                 borderRadius: '12px',
                 border: '1px solid var(--border-color)',
-                marginBottom: '24px',
+                marginBottom: '16px',
                 fontSize: '1rem',
-                outline: 'none'
+                outline: 'none',
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
               }}
             />
+
+            {/* Category Filters (Horizontal Scroll) */}
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '16px', marginBottom: '8px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {['Todas', ...Array.from(new Set(catalog.map(b => b.category))).sort((a,b) => a.localeCompare(b))].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: 'none',
+                    background: selectedCategory === cat ? 'var(--accent-primary)' : '#e2e8f0',
+                    color: selectedCategory === cat ? 'white' : '#475569',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease',
+                    boxShadow: selectedCategory === cat ? '0 4px 8px rgba(37, 99, 235, 0.2)' : 'none'
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
             
             {catalog
-              .filter(biz => 
-                biz.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                biz.category.toLowerCase().includes(searchQuery.toLowerCase())
-              )
+              .filter(biz => {
+                const matchesSearch = biz.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                      biz.category.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesCategory = selectedCategory === 'Todas' || biz.category === selectedCategory;
+                return matchesSearch && matchesCategory;
+              })
               .sort((a, b) => a.name.localeCompare(b.name))
               .map(biz => (
               <div key={biz.id} style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
