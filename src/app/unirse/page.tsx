@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 
 interface Category {
@@ -206,7 +207,9 @@ export default function UnirsePage() {
           <Link href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '0.9rem', display: 'inline-block', marginBottom: '20px' }}>
             ← Volver al inicio
           </Link>
-          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🏪</div>
+          <div style={{ marginBottom: '16px' }}>
+            <Image src="/logonuevo.png" alt="Santiago te Premia" width={300} height={150} style={{ width: 'auto', height: '60px', objectFit: 'contain' }} />
+          </div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '12px', letterSpacing: '-0.5px' }}>
             Unite a Santiago te Premia
           </h1>

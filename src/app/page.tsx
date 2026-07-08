@@ -66,8 +66,7 @@ export default function Home() {
       <header className="header" style={{ position: 'relative', zIndex: 50 }}>
         <div className="container header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Image src="/logo-camara.png" alt="Cámara de Comercio" width={300} height={150} style={{ width: 'auto', height: '40px', objectFit: 'contain' }} />
-            <span className="logo" style={{ fontSize: '1.2rem', whiteSpace: 'nowrap' }}>Santiago te Premia</span>
+            <Image src="/logonuevo.png" alt="Santiago te Premia" width={300} height={150} style={{ width: 'auto', height: '60px', objectFit: 'contain' }} />
           </div>
           
           {/* Desktop Nav */}
