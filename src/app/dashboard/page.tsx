@@ -16,6 +16,8 @@ export default function CommerceDashboard() {
     { label: 'Turistas Atendidos', value: '...', accent: 'warning', icon: '👤' },
   ]);
   const [recentCanjes, setRecentCanjes] = useState<any[]>([]);
+  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
+  const [poiIdentifier, setPoiIdentifier] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -70,6 +72,22 @@ export default function CommerceDashboard() {
       }
     }
     loadStats();
+    
+    // Si es hotel, cargamos su QR
+    if (business?.categories?.name?.toLowerCase().includes('hotel')) {
+      const identifier = 'HOTEL_' + business.id.substring(0, 8).toUpperCase();
+      setPoiIdentifier(identifier);
+      supabase.from('points_of_interest').select('id').eq('qr_identifier', identifier).single().then(({data}) => {
+        if (data?.id) {
+           fetch(`/api/points-of-interest/${data.id}/qr?format=json`)
+             .then(res => res.json())
+             .then(json => {
+                if (json.data?.qr_data_url) setQrImageUrl(json.data.qr_data_url);
+             })
+             .catch(console.error);
+        }
+      });
+    }
   }, [business]);
 
   const handleValidate = () => {
@@ -199,6 +217,33 @@ export default function CommerceDashboard() {
                 )}
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Hotel QR Widget */}
+      {poiIdentifier && (
+        <div className="card-static" style={{ marginBottom: '30px', textAlign: 'center', background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(99, 102, 241, 0.05))' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '8px' }}>
+            📍 Tu Código QR de Registro
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px' }}>
+            Los turistas deben escanear este código cuando llegan a tu hotel para registrarse en el sistema y obtener su PIN.
+          </p>
+          {qrImageUrl ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{ background: 'white', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'inline-block' }}>
+                <img src={qrImageUrl} alt="QR Code" style={{ width: '180px', height: '180px' }} />
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Identificador: <strong>{poiIdentifier}</strong>
+              </p>
+              <a href={qrImageUrl} download={`qr-hotel-${poiIdentifier}.png`} className="btn btn-primary">
+                📥 Descargar e Imprimir QR
+              </a>
+            </div>
+          ) : (
+            <div style={{ color: 'var(--text-secondary)' }}>Generando tu código QR...</div>
           )}
         </div>
       )}
