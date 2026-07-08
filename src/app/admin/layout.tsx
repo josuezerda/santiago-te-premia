@@ -41,7 +41,7 @@ export default function AdminLayout({
           borderBottom: '1px solid var(--border-color)',
         }}>
           <Image
-            src="/logo-camara.png"
+            src="/logofinal.jpeg"
             alt="Cámara de Comercio"
             width={200}
             height={100}

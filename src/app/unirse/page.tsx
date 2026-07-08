@@ -208,7 +208,7 @@ export default function UnirsePage() {
             ← Volver al inicio
           </Link>
           <div style={{ marginBottom: '16px' }}>
-            <Image src="/logonuevo.png" alt="Santiago te Premia" width={300} height={150} style={{ width: 'auto', height: '60px', objectFit: 'contain' }} />
+            <Image src="/logofinal.jpeg" alt="Santiago te Premia" width={300} height={150} style={{ width: 'auto', height: '60px', objectFit: 'contain' }} />
           </div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '12px', letterSpacing: '-0.5px' }}>
             Unite a Santiago te Premia
