@@ -322,7 +322,7 @@ export default function Home() {
               </div>
             ) : businesses.length > 0 ? (
               <>
-                {businesses.map((c) => (
+                {businesses.slice(0, 16).map((c) => (
                   <div key={c.id} className="card" style={{ overflow: 'hidden', padding: 0 }}>
                     <div style={{
                       height: '180px',

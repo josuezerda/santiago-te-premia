@@ -156,6 +156,7 @@ async function sendOptionsMenu(to: string, token: string, phoneId: string) {
       { id: 'BTN_MIS_CANJES', title: '📜 Mis Canjes', desc: 'Historial de beneficios canjeados' },
       { id: 'BTN_FAQ', title: '❓ Ayuda / FAQ', desc: 'Preguntas frecuentes' },
       { id: 'BTN_PREMIO_FINAL', title: '🎁 Premio Final', desc: 'Info sobre el premio del programa' },
+      { id: 'BTN_MAPA_COMERCIOS', title: '📍 Ubicación Comercios', desc: 'Mapa de comercios adheridos' },
     ], token, phoneId);
 }
 
@@ -805,6 +806,18 @@ export async function POST(request: NextRequest) {
         `¡${tourist.name}, mirá todos los comercios adheridos y sus descuentos exclusivos!\n\n` +
         `👉 Tocá el enlace para ver el catálogo completo:\n${catalogUrl}\n\n` +
         `📱 _Podés buscar por categoría, nombre o ubicación._`,
+        config.token, config.phoneId);
+      await sendBackButton(from, config.token, config.phoneId);
+      return ok();
+    }
+
+    // --- MAPA DE COMERCIOS ---
+    if (text === 'BTN_MAPA_COMERCIOS') {
+      const mapUrl = `${baseUrl}/comercios`;
+      await sendText(from,
+        `📍 *Mapa de Comercios*\n\n` +
+        `¡Mirá todos los comercios adheridos en el mapa para ver cuáles están cerca tuyo!\n\n` +
+        `👉 Tocá el enlace para abrir el mapa interactivo:\n${mapUrl}`,
         config.token, config.phoneId);
       await sendBackButton(from, config.token, config.phoneId);
       return ok();
