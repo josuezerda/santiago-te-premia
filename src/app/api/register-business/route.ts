@@ -98,6 +98,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Regla especial: Gastronomía se aprueba siempre automáticamente
+    if (!autoApproved) {
+      const { data: catData } = await supabaseAdmin
+        .from('categories')
+        .select('name')
+        .eq('id', category_id)
+        .single();
+        
+      if (catData?.name?.toLowerCase().includes('gastronomía') || catData?.name?.toLowerCase().includes('gastronomia')) {
+        autoApproved = true;
+      }
+    }
+
     const businessStatus = autoApproved ? 'ACTIVE' : 'PENDING';
 
     // Crear comercio
