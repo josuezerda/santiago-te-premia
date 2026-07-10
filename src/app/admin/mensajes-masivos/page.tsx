@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 export default function MensajesMasivosPage() {
   // Template config
@@ -8,6 +8,8 @@ export default function MensajesMasivosPage() {
   const [includeName, setIncludeName] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [buttonUrl, setButtonUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const imgRef = useRef<HTMLInputElement>(null);
 
   // Contacts
   const [contacts, setContacts] = useState<{ phone: string; name: string }[]>([]);
@@ -191,7 +193,45 @@ export default function MensajesMasivosPage() {
               </label>
 
               <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Imagen del Header (URL Opcional):</label>
+                <label style={{ fontSize: '0.85rem', fontWeight: 500, display: 'block', marginBottom: '8px' }}>Imagen del Header:</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                  <input
+                    ref={imgRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsUploading(true);
+                      try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                        const json = await res.json();
+                        if (json.url) {
+                          setImageUrl(json.url);
+                        } else {
+                          alert('Error al subir la imagen: ' + (json.error || 'desconocido'));
+                        }
+                      } catch (err: any) {
+                        alert('Error: ' + err.message);
+                      }
+                      setIsUploading(false);
+                      if (imgRef.current) imgRef.current.value = '';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => imgRef.current?.click()}
+                    disabled={isUploading}
+                    className="btn btn-primary"
+                    style={{ whiteSpace: 'nowrap', fontSize: '0.85rem' }}
+                  >
+                    {isUploading ? '⏳ Subiendo...' : '📷 Subir Imagen'}
+                  </button>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>o pegá el link directamente:</span>
+                </div>
                 <input
                   type="url"
                   className="form-input"
@@ -199,6 +239,13 @@ export default function MensajesMasivosPage() {
                   value={imageUrl}
                   onChange={e => setImageUrl(e.target.value)}
                 />
+                {imageUrl && (
+                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <img src={imageUrl} alt="Preview" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600 }}>✅ Imagen cargada</span>
+                    <button type="button" onClick={() => setImageUrl('')} style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer' }}>✕ Quitar</button>
+                  </div>
+                )}
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Solo completá si tu plantilla de Meta tiene un HEADER de imagen.</p>
               </div>
 
