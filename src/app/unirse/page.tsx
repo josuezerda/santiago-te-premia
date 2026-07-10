@@ -216,6 +216,13 @@ export default function UnirsePage() {
           <p style={{ fontSize: '1.05rem', opacity: 0.85, lineHeight: 1.6, maxWidth: '480px', margin: '0 auto' }}>
             Registrá tu comercio para formar parte del programa de beneficios turísticos más grande de Santiago del Estero.
           </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px', flexWrap: 'wrap', opacity: 0.85 }}>
+            <Image src="/logo-1.png" alt="Logo 1" width={200} height={100} style={{ width: 'auto', height: '35px', objectFit: 'contain' }} />
+            <Image src="/logo-2.png" alt="Logo 2" width={200} height={100} style={{ width: 'auto', height: '35px', objectFit: 'contain' }} />
+            <Image src="/logo-3.png" alt="Logo 3" width={200} height={100} style={{ width: 'auto', height: '35px', objectFit: 'contain' }} />
+            <Image src="/logo-4.png" alt="Logo 4" width={200} height={100} style={{ width: 'auto', height: '35px', objectFit: 'contain' }} />
+            <Image src="/logo-5.png" alt="Logo 5" width={200} height={100} style={{ width: 'auto', height: '35px', objectFit: 'contain' }} />
+          </div>
         </div>
       </header>
 
