@@ -13,6 +13,7 @@ const navLinks = [
   { href: '/admin/turistas', label: 'Turistas', icon: '👤' },
   { href: '/admin/canjes', label: 'Canjes', icon: '🔄' },
   { href: '/admin/campanas', label: 'Campañas', icon: '📢' },
+  { href: '/admin/mensajes-masivos', label: 'Mensajes Masivos', icon: '📡' },
   { href: '/admin/configuracion', label: 'Configuración', icon: '⚙️' },
 ];
 
