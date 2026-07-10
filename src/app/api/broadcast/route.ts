@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
     try {
@@ -8,8 +9,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Faltan parámetros (to, templateName)" }, { status: 400 });
         }
 
-        const NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-        const JWT_TOKEN = process.env.WHATSAPP_API_TOKEN;
+        // Leer credenciales de la DB (igual que el webhook)
+        const { data: settings } = await supabaseAdmin
+            .from('system_settings')
+            .select('whatsapp_api_token, whatsapp_phone_number_id')
+            .limit(1)
+            .single();
+
+        const NUMBER_ID = settings?.whatsapp_phone_number_id || process.env.WHATSAPP_PHONE_NUMBER_ID;
+        const JWT_TOKEN = settings?.whatsapp_api_token || process.env.WHATSAPP_API_TOKEN;
         const VERSION = 'v19.0';
 
         if (!NUMBER_ID || !JWT_TOKEN) {
