@@ -12,6 +12,7 @@ interface Category {
 interface Business {
   id: string;
   name: string;
+  trade_name?: string;
   category_id: string;
   categories?: { name: string };
   benefit_percentage: number;
@@ -23,6 +24,7 @@ interface Business {
 }
 
 export default function ComerciosPage() {
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState('');
@@ -30,20 +32,29 @@ export default function ComerciosPage() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
+  function shuffleArray<T>(arr: T[]): T[] {
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
   useEffect(() => {
     async function fetchData() {
       try {
         const [bizRes, catRes] = await Promise.all([
           fetch('/api/businesses?status=ACTIVE'),
-          fetch('/api/categories') // Asumo que existe o se puede obtener de supabase, si no, saco categories de unique categories en businesses
+          fetch('/api/categories')
         ]);
         
         const bizJson = await bizRes.json();
         
         if (bizJson.success) {
-          setBusinesses(bizJson.data);
+          setAllBusinesses(bizJson.data);
+          setBusinesses(shuffleArray(bizJson.data));
           
-          // Extraer categorías únicas de los comercios
           const uniqueCats = Array.from(new Set(bizJson.data.map((b: Business) => b.categories?.name).filter(Boolean))) as string[];
           setCategories([{ id: 'todos', name: 'Todos' }, ...uniqueCats.map(name => ({ id: name, name }))]);
         }
@@ -56,8 +67,18 @@ export default function ComerciosPage() {
     fetchData();
   }, []);
 
+  // Re-mezclar cada 60 segundos
+  useEffect(() => {
+    if (allBusinesses.length === 0) return;
+    const interval = setInterval(() => {
+      setBusinesses(shuffleArray(allBusinesses));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [allBusinesses]);
+
   const filtered = businesses.filter(b => {
-    const matchSearch = b.name.toLowerCase().includes(search.toLowerCase());
+    const displayName = b.trade_name || b.name;
+    const matchSearch = displayName.toLowerCase().includes(search.toLowerCase()) || b.name.toLowerCase().includes(search.toLowerCase());
     const matchCat = selectedCategory === 'Todos' || b.categories?.name === selectedCategory;
     return matchSearch && matchCat;
   });
@@ -154,7 +175,7 @@ export default function ComerciosPage() {
                         ) : '🏪'}
                       </div>
                       <div style={{ padding: '20px' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px 0', color: '#0f172a' }}>{c.name}</h3>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px 0', color: '#0f172a' }}>{c.trade_name || c.name}</h3>
                         <p style={{ color: '#64748b', fontSize: '0.85rem', margin: '0 0 12px 0' }}>{c.categories?.name || 'Comercio Local'}</p>
                         <p style={{ color: '#64748b', fontSize: '0.8rem', margin: '0 0 12px 0', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
                           <span>📍</span> <span style={{ flex: 1 }}>{c.address}</span>
@@ -175,7 +196,7 @@ export default function ComerciosPage() {
                 <div style={{ height: 'calc(100vh - 200px)', minHeight: '500px', width: '100%', position: 'relative' }}>
                   <Map businesses={filtered.map(b => ({
                     id: b.id,
-                    name: b.name,
+                    name: b.trade_name || b.name,
                     category: b.categories?.name,
                     address: b.address,
                     lat: b.lat,

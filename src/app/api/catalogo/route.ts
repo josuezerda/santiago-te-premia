@@ -6,7 +6,7 @@ export async function GET() {
     // 1. Fetch businesses with categories
     const { data: businesses, error: bizError } = await supabaseAdmin
       .from('businesses')
-      .select('id, name, logo_url, address, map_url, categories (name)')
+      .select('id, name, trade_name, logo_url, address, map_url, categories (name)')
       .eq('status', 'ACTIVE');
 
     if (bizError || !businesses) throw bizError;
@@ -60,7 +60,7 @@ export async function GET() {
 
       return {
         id: biz.id,
-        name: biz.name,
+        name: biz.trade_name || biz.name,
         logo: biz.logo_url,
         address: biz.address || '',
         map_url: biz.map_url || '',

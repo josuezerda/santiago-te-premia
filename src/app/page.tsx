@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 interface Business {
   id: string;
   name: string;
+  trade_name?: string;
   categories?: { name: string };
   benefit_percentage: number;
   image?: string;
@@ -14,8 +15,19 @@ interface Business {
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Función para mezclar aleatoriamente un array
+  function shuffleArray<T>(arr: T[]): T[] {
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
 
   useEffect(() => {
     async function fetchBusinesses() {
@@ -23,7 +35,8 @@ export default function Home() {
         const res = await fetch('/api/businesses?status=ACTIVE');
         const json = await res.json();
         if (json.success) {
-          setBusinesses(json.data.slice(0, 9));
+          setAllBusinesses(json.data);
+          setBusinesses(shuffleArray(json.data));
         }
       } catch (err) {
         console.error(err);
@@ -33,6 +46,15 @@ export default function Home() {
     }
     fetchBusinesses();
   }, []);
+
+  // Re-mezclar cada 60 segundos
+  useEffect(() => {
+    if (allBusinesses.length === 0) return;
+    const interval = setInterval(() => {
+      setBusinesses(shuffleArray(allBusinesses));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [allBusinesses]);
   const steps = [
     {
       num: '01',
@@ -343,7 +365,7 @@ export default function Home() {
                     </div>
                     <div style={{ padding: '20px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{c.name}</h3>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{c.trade_name || c.name}</h3>
                         <span className="badge badge-success">Activo</span>
                       </div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '12px' }}>
