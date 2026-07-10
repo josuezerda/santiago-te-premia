@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 
 export default function MensajesMasivosPage() {
   // Template config
@@ -11,8 +11,7 @@ export default function MensajesMasivosPage() {
 
   // Contacts
   const [contacts, setContacts] = useState<{ phone: string; name: string }[]>([]);
-  const [manualPhone, setManualPhone] = useState('');
-  const [manualName, setManualName] = useState('');
+  const [bulkText, setBulkText] = useState('');
 
   // Sending state
   const [isSending, setIsSending] = useState(false);
@@ -27,58 +26,26 @@ export default function MensajesMasivosPage() {
   // Skip
   const [skipCount, setSkipCount] = useState(0);
 
-  // File input ref
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  // Parse CSV/TXT file
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      const parsed: { phone: string; name: string }[] = [];
-      
-      for (const line of lines) {
-        // Try CSV: "phone,name" or "phone;name"
-        const parts = line.split(/[,;|\t]/);
-        const phone = parts[0]?.replace(/[^0-9]/g, '').trim();
-        const name = parts[1]?.trim() || '';
-        if (phone && phone.length >= 10) {
-          parsed.push({ phone, name });
-        }
+  // Parse bulk numbers from textarea
+  const parseBulkNumbers = () => {
+    const lines = bulkText.split('\n').map(l => l.trim()).filter(Boolean);
+    const parsed: { phone: string; name: string }[] = [];
+    
+    for (const line of lines) {
+      const phone = line.replace(/[^0-9]/g, '').trim();
+      if (phone && phone.length >= 10) {
+        parsed.push({ phone, name: '' });
       }
-
-      if (parsed.length > 0) {
-        setContacts(prev => {
-          const existing = new Set(prev.map(c => c.phone));
-          const newOnes = parsed.filter(p => !existing.has(p.phone));
-          return [...prev, ...newOnes];
-        });
-      } else {
-        alert('No se encontraron números válidos en el archivo. Asegurate de que tenga un número por línea.');
-      }
-    };
-    reader.readAsText(file);
-    // Reset input
-    if (fileRef.current) fileRef.current.value = '';
-  };
-
-  const addManualContact = () => {
-    const phone = manualPhone.replace(/[^0-9]/g, '').trim();
-    if (!phone || phone.length < 10) {
-      alert('Ingresá un número válido (al menos 10 dígitos)');
-      return;
     }
-    if (contacts.find(c => c.phone === phone)) {
-      alert('Ese número ya está en la lista.');
-      return;
+
+    if (parsed.length > 0) {
+      const existing = new Set(contacts.map(c => c.phone));
+      const newOnes = parsed.filter(p => !existing.has(p.phone));
+      setContacts(prev => [...prev, ...newOnes]);
+      setBulkText('');
+    } else {
+      alert('No se encontraron números válidos. Asegurate de poner un número por línea (mínimo 10 dígitos).');
     }
-    setContacts(prev => [...prev, { phone, name: manualName.trim() }]);
-    setManualPhone('');
-    setManualName('');
   };
 
   const removeContact = (phone: string) => {
@@ -271,50 +238,31 @@ export default function MensajesMasivosPage() {
             2️⃣ Lista de Contactos
           </h2>
 
-          {/* Upload CSV */}
-          <div style={{ background: 'rgba(37, 99, 235, 0.05)', border: '2px dashed rgba(37, 99, 235, 0.3)', borderRadius: '12px', padding: '20px', textAlign: 'center', marginBottom: '16px' }}>
-            <p style={{ fontWeight: 600, marginBottom: '8px' }}>📎 Cargá tu lista desde un archivo</p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-              Archivo CSV o TXT con formato: <code>numero,nombre</code> (un contacto por línea)
+          {/* Textarea para pegar números */}
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Pegá los números uno debajo del otro (solo el número, sin nombre). Ejemplo:
             </p>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".csv,.txt,.tsv"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-            />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="btn btn-primary"
-              style={{ fontSize: '0.9rem' }}
-            >
-              📂 Seleccionar Archivo
-            </button>
-          </div>
-
-          {/* Manual add */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <input
-              type="text"
+            <textarea
               className="form-input"
-              placeholder="Número (ej: 5493855123456)"
-              value={manualPhone}
-              onChange={e => setManualPhone(e.target.value)}
-              style={{ flex: 1, minWidth: '200px' }}
+              placeholder={"5493855123456\n5493854987654\n5493851234567"}
+              value={bulkText}
+              onChange={e => setBulkText(e.target.value)}
+              rows={8}
+              style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.95rem', lineHeight: 1.6, resize: 'vertical' }}
             />
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Nombre (opcional)"
-              value={manualName}
-              onChange={e => setManualName(e.target.value)}
-              style={{ flex: 1, minWidth: '150px' }}
-            />
-            <button type="button" onClick={addManualContact} className="btn btn-success" style={{ whiteSpace: 'nowrap' }}>
-              + Agregar
-            </button>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={parseBulkNumbers}
+                className="btn btn-success"
+              >
+                ✅ Cargar Números
+              </button>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                {bulkText.split('\n').filter(l => l.replace(/[^0-9]/g, '').length >= 10).length} números detectados
+              </span>
+            </div>
           </div>
 
           {/* Contacts list */}
