@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Regla especial: Gastronomía se aprueba siempre automáticamente
+    // Regla especial: Gastronomía y Hotelería se aprueban siempre automáticamente
     if (!autoApproved) {
       const { data: catData } = await supabaseAdmin
         .from('categories')
@@ -106,7 +106,8 @@ export async function POST(request: NextRequest) {
         .eq('id', category_id)
         .single();
         
-      if (catData?.name?.toLowerCase().includes('gastronomía') || catData?.name?.toLowerCase().includes('gastronomia')) {
+      const catName = catData?.name?.toLowerCase() || '';
+      if (catName.includes('gastronomía') || catName.includes('gastronomia') || catName.includes('hotelería') || catName.includes('hoteleria') || catName.includes('hotel')) {
         autoApproved = true;
       }
     }
