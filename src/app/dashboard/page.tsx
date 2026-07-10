@@ -74,19 +74,58 @@ export default function CommerceDashboard() {
     loadStats();
     
     // Si es hotel, cargamos su QR
-    if (business?.categories?.name?.toLowerCase().includes('hotel')) {
-      const identifier = 'HOTEL_' + business.id.substring(0, 8).toUpperCase();
-      setPoiIdentifier(identifier);
-      supabase.from('points_of_interest').select('id').eq('qr_identifier', identifier).single().then(({data}) => {
-        if (data?.id) {
-           fetch(`/api/points-of-interest/${data.id}/qr?format=json`)
-             .then(res => res.json())
-             .then(json => {
-                if (json.data?.qr_data_url) setQrImageUrl(json.data.qr_data_url);
-             })
-             .catch(console.error);
+    if (business?.categories?.name?.toLowerCase().includes('hotel') || business?.categories?.name?.toLowerCase().includes('residencial') || business?.categories?.name?.toLowerCase().includes('hotelería')) {
+      const loadQR = async () => {
+        try {
+          const identifier = 'HOTEL_' + business.id.substring(0, 8).toUpperCase();
+          setPoiIdentifier(identifier);
+          
+          // Buscar el POI en la DB
+          const { data: poi } = await supabase
+            .from('points_of_interest')
+            .select('id, qr_identifier')
+            .eq('qr_identifier', identifier)
+            .single();
+
+          if (poi?.id) {
+            // Obtener el número real de WhatsApp del sistema
+            const { data: settings } = await supabase
+              .from('system_settings')
+              .select('whatsapp_bot_number')
+              .limit(1)
+              .single();
+            
+            const botNumber = settings?.whatsapp_bot_number || '5493856208451';
+            const whatsappLink = `https://wa.me/${botNumber}?text=REGISTRO_${poi.qr_identifier}`;
+            
+            // Generar QR usando API pública (funciona en todos los dispositivos)
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(whatsappLink)}&margin=10`;
+            setQrImageUrl(qrUrl);
+          } else {
+            // Si no existe el POI, intentar con la API del server
+            const res = await fetch(`/api/points-of-interest/by-identifier/${identifier}`);
+            if (res.ok) {
+              const json = await res.json();
+              if (json.data?.id) {
+                const botNumber = '5493856208451';
+                const whatsappLink = `https://wa.me/${botNumber}?text=REGISTRO_${identifier}`;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(whatsappLink)}&margin=10`;
+                setQrImageUrl(qrUrl);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error loading QR:', err);
+          // Fallback: generar QR directamente con el identifier
+          const botNumber = '5493856208451';
+          const identifier = 'HOTEL_' + business.id.substring(0, 8).toUpperCase();
+          setPoiIdentifier(identifier);
+          const whatsappLink = `https://wa.me/${botNumber}?text=REGISTRO_${identifier}`;
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(whatsappLink)}&margin=10`;
+          setQrImageUrl(qrUrl);
         }
-      });
+      };
+      loadQR();
     }
   }, [business]);
 
