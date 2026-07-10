@@ -104,7 +104,7 @@ export default function MensajesMasivosPage() {
       return;
     }
 
-    if (!confirm(`¿Estás seguro de enviar esta campaña a ${toProcess.length} contactos? ${skipCount > 0 ? `(Omitiendo los primeros ${skipCount}) ` : ''}Esto tomará aproximadamente ${Math.ceil((toProcess.length * 3) / 60)} minutos.`)) return;
+    if (!confirm(`¿Estás seguro de enviar esta campaña a ${toProcess.length} contactos? ${skipCount > 0 ? `(Omitiendo los primeros ${skipCount}) ` : ''}Esto tomará aproximadamente ${Math.ceil((toProcess.length * 5) / 60)} minutos.`)) return;
 
     setIsSending(true);
     setResult(null);
@@ -141,7 +141,7 @@ export default function MensajesMasivosPage() {
       }
       setProgress(prev => ({ ...prev, current: i + 1 }));
       if (i < toProcess.length - 1) {
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 5000));
       }
     }
 
@@ -463,7 +463,7 @@ export default function MensajesMasivosPage() {
                 }} />
               </div>
               <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
-                Estimado restante: {Math.ceil(((progress.total - progress.current) * 3) / 60)} min
+                Estimado restante: {Math.ceil(((progress.total - progress.current) * 5) / 60)} min
               </p>
             </div>
           )}
