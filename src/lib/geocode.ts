@@ -11,22 +11,22 @@ export async function extractCoordsFromMapUrl(mapUrl: string): Promise<{ lat: nu
       fullUrl = res.url;
     }
 
-    // Buscar coordenadas en la URL expandida
-    // Formato: @-27.7864587,-64.2608791 o !3d-27.7864587!4d-64.2608791
-    const atMatch = fullUrl.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-    if (atMatch) {
-      return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+    // Formato: !8m2!3d-27.7864587!4d-64.2608791 (embed / place URLs)
+    const d8mMatch = fullUrl.match(/!8m2!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
+    if (d8mMatch) {
+      return { lat: parseFloat(d8mMatch[1]), lng: parseFloat(d8mMatch[2]) };
     }
 
+    // Formato: !3d-27.7864587!4d-64.2608791
     const dMatch = fullUrl.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
     if (dMatch) {
       return { lat: parseFloat(dMatch[1]), lng: parseFloat(dMatch[2]) };
     }
 
-    // Formato: !8m2!3d-27.7864587!4d-64.2608791 (embed / place URLs)
-    const d8mMatch = fullUrl.match(/!8m2!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
-    if (d8mMatch) {
-      return { lat: parseFloat(d8mMatch[1]), lng: parseFloat(d8mMatch[2]) };
+    // Formato: @-27.7864587,-64.2608791 (Map center, use only as fallback if no pin coordinates found)
+    const atMatch = fullUrl.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (atMatch) {
+      return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
     }
 
     // Formato: q=-27.7864587,-64.2608791 (coordenadas numéricas)
