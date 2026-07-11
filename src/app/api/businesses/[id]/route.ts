@@ -53,7 +53,7 @@ export async function PUT(
 
     const { user_email, user_password, user_name, ...businessData } = body;
 
-    // Geocodificar si se modificó la dirección o el map_url
+    // Geocodificar si se modificó la dirección o el map_url (sucursal principal)
     if (businessData.address || businessData.map_url) {
       const coords = await getCoordinates(
         businessData.address?.trim() || undefined,
@@ -63,6 +63,26 @@ export async function PUT(
         businessData.lat = coords.lat;
         businessData.lng = coords.lng;
       }
+    }
+
+    // Procesar sucursales adicionales (locations)
+    if (businessData.locations && Array.isArray(businessData.locations)) {
+      businessData.locations = await Promise.all(
+        businessData.locations.map(async (loc: any) => {
+          // Si ya tiene lat/lng y no cambió la dirección, conservarlo
+          if (!loc.lat || !loc.lng) {
+            const coords = await getCoordinates(
+              loc.address?.trim() || undefined,
+              loc.map_url?.trim() || undefined
+            );
+            if (coords) {
+              loc.lat = coords.lat;
+              loc.lng = coords.lng;
+            }
+          }
+          return loc;
+        })
+      );
     }
 
     // Actualizar datos del comercio

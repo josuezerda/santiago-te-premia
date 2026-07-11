@@ -93,6 +93,7 @@ export default function ConfigPage() {
   const [bizInfo, setBizInfo] = useState({
     trade_name: '', address: '', phone: '', description: '',
     benefit_percentage: '', benefit_conditions: '', map_url: '',
+    locations: [] as { address: string, map_url: string, lat?: number, lng?: number }[],
   });
   const [savingBizInfo, setSavingBizInfo] = useState(false);
   const [bizInfoMsg, setBizInfoMsg] = useState('');
@@ -107,6 +108,7 @@ export default function ConfigPage() {
         benefit_percentage: business.benefit_percentage ? String(business.benefit_percentage) : '',
         benefit_conditions: business.benefit_conditions || '',
         map_url: business.map_url || '',
+        locations: Array.isArray(business.locations) ? business.locations : [],
       });
     }
   }, [business]);
@@ -132,6 +134,7 @@ export default function ConfigPage() {
           benefit_percentage: bizInfo.benefit_percentage ? Number(bizInfo.benefit_percentage) : 0,
           benefit_conditions: bizInfo.benefit_conditions,
           map_url: bizInfo.map_url,
+          locations: bizInfo.locations,
         }),
       });
       if (res.ok) {
@@ -210,6 +213,57 @@ export default function ConfigPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '20px' }}>
             <button className="btn btn-primary" onClick={handleSaveBizInfo} disabled={savingBizInfo}>
               {savingBizInfo ? '⏳ Guardando...' : '💾 Guardar Cambios'}
+            </button>
+            {bizInfoMsg && <span style={{ fontSize: '0.9rem' }}>{bizInfoMsg}</span>}
+          </div>
+        </div>
+
+        {/* ====== SUCURSALES (OTRAS DIRECCIONES) ====== */}
+        <div className="card-static" style={{ gridColumn: '1 / -1' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>📍</span> Sucursales (Otras Direcciones)
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+            Agregá otras sucursales o puntos de venta. Cada una aparecerá como un pin separado en el mapa público.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {bizInfo.locations.map((loc, idx) => (
+              <div key={idx} style={{ padding: '16px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr auto', alignItems: 'end' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Dirección de la Sucursal</label>
+                  <input className="form-input" value={loc.address} onChange={e => {
+                    const newLocs = [...bizInfo.locations];
+                    newLocs[idx].address = e.target.value;
+                    setBizInfo(p => ({ ...p, locations: newLocs }));
+                  }} placeholder="Ej: Sucursal Centro - Independencia 123" />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Enlace Google Maps</label>
+                  <input className="form-input" value={loc.map_url} onChange={e => {
+                    const newLocs = [...bizInfo.locations];
+                    newLocs[idx].map_url = e.target.value;
+                    setBizInfo(p => ({ ...p, locations: newLocs }));
+                  }} placeholder="https://maps.app.goo.gl/..." />
+                </div>
+                <button className="btn btn-outline" style={{ borderColor: 'var(--danger)', color: 'var(--danger)', padding: '10px 16px' }} onClick={() => {
+                  const newLocs = [...bizInfo.locations];
+                  newLocs.splice(idx, 1);
+                  setBizInfo(p => ({ ...p, locations: newLocs }));
+                }}>Eliminar</button>
+              </div>
+            ))}
+            
+            <button className="btn btn-outline" style={{ alignSelf: 'flex-start' }} onClick={() => {
+              setBizInfo(p => ({ ...p, locations: [...p.locations, { address: '', map_url: '' }] }));
+            }}>
+              + Agregar Sucursal
+            </button>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-color)' }}>
+            <button className="btn btn-primary" onClick={handleSaveBizInfo} disabled={savingBizInfo}>
+              {savingBizInfo ? '⏳ Guardando...' : '💾 Guardar Sucursales'}
             </button>
             {bizInfoMsg && <span style={{ fontSize: '0.9rem' }}>{bizInfoMsg}</span>}
           </div>

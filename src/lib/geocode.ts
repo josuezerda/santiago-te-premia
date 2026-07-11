@@ -38,8 +38,10 @@ export async function extractCoordsFromMapUrl(mapUrl: string): Promise<{ lat: nu
     // Fallback: q= contiene dirección de texto → geocodificar con Nominatim
     const qTextMatch = fullUrl.match(/[?&]q=([^&]+)/);
     if (qTextMatch) {
-      const addressText = decodeURIComponent(qTextMatch[1].replace(/\+/g, ' '));
-      console.log('Geocoding text address from q= param:', addressText);
+      let addressText = decodeURIComponent(qTextMatch[1].replace(/\+/g, ' '));
+      // Clean postal codes like G4200AIA and extra commas
+      addressText = addressText.replace(/\b[A-Z]\d{4}[A-Z]{3}\b|\b\d{4}\b/g, '').replace(/,\s*,/g, ',').trim();
+      console.log('Geocoding cleaned text address from q= param:', addressText);
       const geocoded = await geocodeAddress(addressText);
       if (geocoded) return geocoded;
     }

@@ -15,6 +15,7 @@ interface MapProps {
     address: string;
     lat?: number | null;
     lng?: number | null;
+    locations?: { address: string; map_url?: string; lat?: number; lng?: number }[];
   }[];
 }
 
@@ -30,18 +31,46 @@ export default function Map({ businesses }: MapProps) {
   // Centro por defecto: Santiago del Estero
   const defaultCenter: [number, number] = [-27.7833, -64.2667];
   
-  // Filtrar comercios que tienen coordenadas válidas
-  const markers = businesses.filter(b => b.lat != null && b.lng != null) as {
+  // Preparar todos los marcadores (principal + sucursales)
+  const markers: {
     id: string;
     name: string;
     category?: string;
     address: string;
     lat: number;
     lng: number;
-  }[];
+  }[] = [];
 
-  // Si hay marcadores, centrar en el primero, si no en el centro por defecto
-  const center = markers.length > 0 ? [markers[0].lat, markers[0].lng] as [number, number] : defaultCenter;
+  businesses.forEach(b => {
+    if (b.lat != null && b.lng != null) {
+      markers.push({
+        id: b.id,
+        name: b.name,
+        category: b.category,
+        address: b.address,
+        lat: b.lat,
+        lng: b.lng,
+      });
+    }
+    
+    if (Array.isArray(b.locations)) {
+      b.locations.forEach((loc, idx) => {
+        if (loc.lat != null && loc.lng != null) {
+          markers.push({
+            id: `${b.id}-branch-${idx}`,
+            name: `${b.name} (Sucursal)`,
+            category: b.category,
+            address: loc.address,
+            lat: loc.lat,
+            lng: loc.lng,
+          });
+        }
+      });
+    }
+  });
+
+  // Centrar siempre en Santiago del Estero por defecto (Plaza Libertad)
+  const center = defaultCenter;
 
   return (
     <div style={{ height: '100%', width: '100%', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', zIndex: 1 }}>

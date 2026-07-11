@@ -21,6 +21,7 @@ interface Business {
   address: string;
   lat?: number;
   lng?: number;
+  locations?: { address: string; map_url?: string; lat?: number; lng?: number }[];
 }
 
 export default function ComerciosPage() {
@@ -200,7 +201,8 @@ export default function ComerciosPage() {
                     category: b.categories?.name,
                     address: b.address,
                     lat: b.lat,
-                    lng: b.lng
+                    lng: b.lng,
+                    locations: b.locations
                   }))} />
                 </div>
               )}

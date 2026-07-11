@@ -55,6 +55,10 @@ export interface Business {
   category_id?: string;
   logo_url?: string;
   photos?: string[];
+  map_url?: string;
+  lat?: number;
+  lng?: number;
+  locations?: { address: string; map_url?: string; lat?: number; lng?: number }[];
   address: string;
   latitude?: number;
   longitude?: number;
