@@ -18,6 +18,8 @@ export default function Home() {
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
+  const [promos, setPromos] = useState<any[]>([]);
+  const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
 
   // Función para mezclar aleatoriamente un array
   function shuffleArray<T>(arr: T[]): T[] {
@@ -55,6 +57,31 @@ export default function Home() {
     }, 60000);
     return () => clearInterval(interval);
   }, [allBusinesses]);
+
+  useEffect(() => {
+    fetch('/api/catalogo')
+      .then(r => r.json())
+      .then(data => {
+        if (data.data) {
+          const allPromos: any[] = [];
+          data.data.forEach((biz: any) => {
+            (biz.promotions || []).forEach((p: any) => {
+              allPromos.push({ ...p, businessName: biz.trade_name || biz.name, businessCategory: biz.categories?.name });
+            });
+          });
+          setPromos(allPromos);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (promos.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentPromoIndex(prev => (prev + 1) % promos.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [promos]);
   const steps = [
     {
       num: '01',
@@ -99,11 +126,8 @@ export default function Home() {
             <a href="#comercios" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
               Comercios
             </a>
-            <a href="https://wa.me/5493856208451" target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ borderColor: 'var(--success)', color: 'var(--success)' }}>
-              Registrarte
-            </a>
             <Link href="/login" className="btn btn-primary">
-              Ingresar
+              Iniciar Sesión
             </Link>
           </nav>
 
@@ -128,11 +152,8 @@ export default function Home() {
               Comercios
             </a>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-              <a href="https://wa.me/5493856208451" target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)} className="btn btn-outline" style={{ borderColor: 'var(--success)', color: 'var(--success)', justifyContent: 'center', width: '100%' }}>
-                Registrarte vía WhatsApp
-              </a>
               <Link href="/login" onClick={() => setIsMenuOpen(false)} className="btn btn-primary" style={{ justifyContent: 'center', width: '100%' }}>
-                Ingresar al panel
+                Iniciar Sesión
               </Link>
             </div>
           </div>
@@ -310,6 +331,84 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Beneficios Destacados Slider */}
+      {promos.length > 0 && (
+        <section style={{
+          padding: '60px 20px',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+          color: 'white',
+          overflow: 'hidden',
+        }}>
+          <div className="container" style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <h2 style={{ textAlign: 'center', fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 700, marginBottom: '8px' }}>
+              🎁 Beneficios Destacados
+            </h2>
+            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', marginBottom: '32px' }}>
+              Aprovechá estos beneficios exclusivos para turistas
+            </p>
+            <div style={{ position: 'relative', minHeight: '160px' }}>
+              {promos.map((promo, i) => (
+                <div
+                  key={promo.id || i}
+                  style={{
+                    position: i === currentPromoIndex ? 'relative' : 'absolute',
+                    top: 0, left: 0, right: 0,
+                    opacity: i === currentPromoIndex ? 1 : 0,
+                    transform: i === currentPromoIndex ? 'translateY(0)' : 'translateY(20px)',
+                    transition: 'opacity 0.6s ease, transform 0.6s ease',
+                    pointerEvents: i === currentPromoIndex ? 'auto' : 'none',
+                    background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(245,158,11,0.1))',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '16px',
+                    padding: '24px 28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '20px',
+                  }}
+                >
+                  <div style={{ fontSize: '2.5rem', flexShrink: 0 }}>🏷️</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      {promo.businessName} • {promo.businessCategory || 'Comercio'}
+                    </div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '6px' }}>{promo.title}</h3>
+                    <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', margin: 0 }}>
+                      {promo.description || promo.conditions || 'Beneficio exclusivo con tu PIN de turista'}
+                    </p>
+                  </div>
+                  {promo.discount_value > 0 && (
+                    <div style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)', borderRadius: '12px', padding: '12px 16px', textAlign: 'center', flexShrink: 0 }}>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1 }}>{promo.discount_value}%</div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.9 }}>DESC.</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {promos.length > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
+                {promos.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPromoIndex(i)}
+                    style={{
+                      width: i === currentPromoIndex ? '24px' : '8px',
+                      height: '8px',
+                      borderRadius: '4px',
+                      border: 'none',
+                      background: i === currentPromoIndex ? '#f59e0b' : 'rgba(255,255,255,0.3)',
+                      transition: 'all 0.3s',
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Comercios Adheridos */}
       <section id="comercios" style={{ padding: '80px 20px' }}>
         <div className="container">
@@ -453,46 +552,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Floating WhatsApp Button */}
-      <style dangerouslySetInnerHTML={{__html: `
-        .whatsapp-btn {
-          position: fixed;
-          bottom: 30px;
-          right: 30px;
-          width: 60px;
-          height: 60px;
-          background-color: #25D366;
-          color: white;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-          z-index: 1000;
-          transition: transform 0.2s;
-          text-decoration: none;
-          animation: bounce 2s infinite;
-        }
-        .whatsapp-btn:hover {
-          transform: scale(1.1);
-          animation: none;
-        }
-        @keyframes bounce {
-          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-10px); }
-          60% { transform: translateY(-5px); }
-        }
-      `}} />
-      <a
-        href="https://wa.me/5493856208451?text=Hola,%20quiero%20conocer%20los%20beneficios"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="whatsapp-btn"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" style={{ width: '35px', height: '35px', fill: 'currentColor' }}>
-          <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z" />
-        </svg>
-      </a>
+
     </div>
   );
 }

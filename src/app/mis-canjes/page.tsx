@@ -100,11 +100,11 @@ function MisCanjesContent() {
                     </div>
                   </div>
                   <span style={{
-                    background: r.status === 'CONFIRMED' ? '#dcfce7' : '#fef3c7',
-                    color: r.status === 'CONFIRMED' ? '#16a34a' : '#d97706',
+                    background: r.status === 'COMPLETED' || r.status === 'CONFIRMED' ? '#dcfce7' : '#fef3c7',
+                    color: r.status === 'COMPLETED' || r.status === 'CONFIRMED' ? '#16a34a' : '#d97706',
                     padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
                   }}>
-                    {r.status === 'CONFIRMED' ? '✅ Canjeado' : '⏳ Pendiente'}
+                    {r.status === 'COMPLETED' || r.status === 'CONFIRMED' ? '✅ Canjeado' : '⏳ Pendiente'}
                   </span>
                 </div>
                 <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#94a3b8' }}>

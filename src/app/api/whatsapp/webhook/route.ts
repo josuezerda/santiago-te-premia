@@ -524,7 +524,7 @@ export async function POST(request: NextRequest) {
 
       // Buscar turista con este PIN
       const { data: tourists } = await supabaseAdmin
-        .from('tourists').select('id, name, last_name, pin_secret, province').neq('pin_secret', '');
+        .from('tourists').select('id, name, last_name, pin_secret, province, poi_id').neq('pin_secret', '');
 
       let foundTourist: any = null;
       if (tourists) {
@@ -540,6 +540,18 @@ export async function POST(request: NextRequest) {
         await setState(from, 'IDLE', {});
         await sendText(from, `❌ *PIN inválido o expirado*\n\nPedile al turista que toque "Mi PIN" para generar uno nuevo.`, config.token, config.phoneId);
         await sendValidatorMenu(from, businessName, config.token, config.phoneId);
+        return ok();
+      }
+
+      if (!foundTourist.poi_id) {
+        await sendText(from, 
+          `⚠️ *No se puede completar el canje*\n\n` +
+          `El turista *${foundTourist.name || ''} ${foundTourist.last_name || ''}* no se registró escaneando un QR de hotel.\n\n` +
+          `Para poder canjear beneficios, el turista debe escanear primero el código QR en la recepción de su hotel. ` +
+          `Indicale que abra la cámara del celular y escanee el QR.`,
+          config.token, config.phoneId);
+        await setState(from, 'IDLE', {});
+        await sendBackButton(from, config.token, config.phoneId);
         return ok();
       }
 
