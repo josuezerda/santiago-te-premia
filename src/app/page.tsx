@@ -372,7 +372,11 @@ export default function Home() {
                     </div>
                     <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '6px' }}>{promo.title}</h3>
                     <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', margin: 0 }}>
-                      {promo.description || promo.conditions || 'Beneficio exclusivo con tu PIN de turista'}
+                      {(() => {
+                        const desc = promo.description;
+                        const isUrlData = !desc || (typeof desc === 'string' && (desc.startsWith('[') || desc.startsWith('http')));
+                        return isUrlData ? (promo.conditions || 'Beneficio exclusivo con tu PIN de turista') : desc;
+                      })()}
                     </p>
                   </div>
                   {promo.value > 0 && promo.value < 100 && (
