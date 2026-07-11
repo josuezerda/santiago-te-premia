@@ -62,15 +62,14 @@ export default function Home() {
     fetch('/api/catalogo')
       .then(r => r.json())
       .then(data => {
-        if (data.data) {
-          const allPromos: any[] = [];
-          data.data.forEach((biz: any) => {
-            (biz.promotions || []).forEach((p: any) => {
-              allPromos.push({ ...p, businessName: biz.trade_name || biz.name, businessCategory: biz.categories?.name });
-            });
+        const catalog = Array.isArray(data) ? data : data.data || [];
+        const allPromos: any[] = [];
+        catalog.forEach((biz: any) => {
+          (biz.promotions || []).forEach((p: any) => {
+            allPromos.push({ ...p, businessName: biz.name, businessCategory: biz.category });
           });
-          setPromos(allPromos);
-        }
+        });
+        setPromos(allPromos);
       })
       .catch(console.error);
   }, []);
@@ -376,9 +375,9 @@ export default function Home() {
                       {promo.description || promo.conditions || 'Beneficio exclusivo con tu PIN de turista'}
                     </p>
                   </div>
-                  {promo.discount_value > 0 && (
+                  {promo.value > 0 && promo.value < 100 && (
                     <div style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)', borderRadius: '12px', padding: '12px 16px', textAlign: 'center', flexShrink: 0 }}>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1 }}>{promo.discount_value}%</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1 }}>{promo.value}%</div>
                       <div style={{ fontSize: '0.7rem', opacity: 0.9 }}>DESC.</div>
                     </div>
                   )}
