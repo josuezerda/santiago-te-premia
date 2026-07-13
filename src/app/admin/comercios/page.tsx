@@ -12,6 +12,7 @@ interface Comercio {
   status: 'active' | 'paused' | 'suspended' | 'pending';
   image?: string;
   canjes: number;
+  benefit_conditions?: string;
 }
 
 const categories = ['Todos', 'Gastronomía', 'Perfumería', 'Artesanías', 'Salud', 'Librería', 'Indumentaria', 'Regionales', 'Transporte', 'Turismo', 'Entretenimiento'];
@@ -43,7 +44,7 @@ export default function ComerciosPage() {
     const { data, error } = await supabase
       .from('businesses')
       .select(`
-        id, name, address, benefit_percentage, status, logo_url, phone, map_url,
+        id, name, address, benefit_percentage, benefit_conditions, status, logo_url, phone, map_url,
         categories ( id, name )
       `);
 
@@ -59,6 +60,7 @@ export default function ComerciosPage() {
         phone: b.phone || '',
         map_url: b.map_url || '',
         discount: b.benefit_percentage > 0 ? `${b.benefit_percentage}%` : 'Beneficio',
+        benefit_conditions: b.benefit_conditions || '',
         status: b.status.toLowerCase() as any,
         image: b.logo_url || undefined,
         canjes: 0,
@@ -184,6 +186,36 @@ export default function ComerciosPage() {
     pending: 'Pendiente',
   };
 
+  const handleExportCSV = () => {
+    // Definimos las cabeceras
+    const headers = ['Nombre', 'Categoría', 'Dirección', 'Teléfono', 'Beneficio (%)', 'Condiciones Beneficio', 'Estado', 'Link Maps'];
+    
+    // Armamos las filas con los comercios filtrados
+    const rows = filtered.map(c => [
+      `"${(c.name || '').replace(/"/g, '""')}"`,
+      `"${(c.category || '').replace(/"/g, '""')}"`,
+      `"${(c.address || '').replace(/"/g, '""')}"`,
+      `"${((c as any).phone || '').replace(/"/g, '""')}"`,
+      `"${c.discount.replace('%', '')}"`,
+      `"${(c.benefit_conditions || '').replace(/"/g, '""')}"`,
+      `"${statusLabels[c.status] || c.status}"`,
+      `"${((c as any).map_url || '').replace(/"/g, '""')}"`
+    ]);
+
+    // Unimos cabeceras y filas con coma y saltos de línea
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    // Creamos un Blob y forzamos la descarga (agregando BOM para tildes correctas en Excel)
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `comercios_santiago_te_premia_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando comercios...</div>;
   }
@@ -199,9 +231,14 @@ export default function ComerciosPage() {
             {comerciosData.length} comercios registrados · {comerciosData.filter(c => c.status === 'active').length} activos
           </p>
         </div>
-        <button className="btn btn-primary" onClick={openCreateModal}>
-          + Nuevo Comercio
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn btn-outline" onClick={handleExportCSV}>
+            📥 Descargar Excel (CSV)
+          </button>
+          <button className="btn btn-primary" onClick={openCreateModal}>
+            + Nuevo Comercio
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
