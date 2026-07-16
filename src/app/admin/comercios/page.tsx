@@ -15,7 +15,7 @@ interface Comercio {
   benefit_conditions?: string;
 }
 
-const categories = ['Todos', 'Gastronomía', 'Perfumería', 'Artesanías', 'Salud', 'Librería', 'Indumentaria', 'Regionales', 'Transporte', 'Turismo', 'Entretenimiento'];
+const categories = ['Todos', 'Gastronomía', 'Perfumería', 'Artesanías', 'Salud', 'Librería', 'Indumentaria', 'Regionales', 'Transporte', 'Turismo', 'Entretenimiento', 'Juguetería'];
 
 export default function ComerciosPage() {
   const [search, setSearch] = useState('');
