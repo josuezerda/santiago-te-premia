@@ -363,8 +363,19 @@ export async function POST(request: NextRequest) {
       let poi: any = null;
       if (qrId) {
         const { data: poiData } = await supabaseAdmin
-          .from('points_of_interest').select('id, name').eq('qr_identifier', qrId).single();
+          .from('points_of_interest').select('id, name, type, created_at').eq('qr_identifier', qrId).single();
         poi = poiData;
+        
+        // Validar expiración de eventos (1 semana)
+        if (poi && poi.type === 'EVENT') {
+          const createdAt = new Date(poi.created_at);
+          const now = new Date();
+          const diffDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+          if (diffDays > 7) {
+            await sendText(from, `⚠️ El código QR del evento *${poi.name}* ha expirado (validez de 1 semana).`, config.token, config.phoneId);
+            return ok();
+          }
+        }
       }
 
       // ¿Ya registrado?
@@ -408,24 +419,9 @@ export async function POST(request: NextRequest) {
       const firstName = parts[0];
       const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
 
-      await setState(from, 'REG_DNI', { ...convState.data, name: firstName, last_name: lastName, full_name: fullName });
+      await setState(from, 'REG_BIRTHDATE', { ...convState.data, name: firstName, last_name: lastName, full_name: fullName, dni: '' });
       await sendText(from,
         `✅ *${fullName}*, ¡encantado!\n\n` +
-        `📝 *¿Cuál es tu número de DNI?*\n_(Solo números, ej: 35456789)_`,
-        config.token, config.phoneId);
-      return ok();
-    }
-
-    // --- Paso 2: DNI ---
-    if (convState.state === 'REG_DNI') {
-      const dni = text.trim().replace(/\./g, '').replace(/-/g, '').replace(/\s/g, '');
-      if (!dni || dni.length < 6 || !/^\d+$/.test(dni)) {
-        await sendText(from, '⚠️ Ingresá un DNI válido (solo números, mínimo 6 dígitos).\nEjemplo: 35456789', config.token, config.phoneId);
-        return ok();
-      }
-      await setState(from, 'REG_BIRTHDATE', { ...convState.data, dni });
-      await sendText(from,
-        `✅ DNI registrado.\n\n` +
         `📝 *¿Cuál es tu fecha de nacimiento?*\n_(Formato: DD/MM/AAAA, ej: 15/03/1990)_`,
         config.token, config.phoneId);
       return ok();
@@ -500,7 +496,6 @@ export async function POST(request: NextRequest) {
       await sendText(from,
         `🎉 *¡Registro completado!*\n\n` +
         `👤 *${d.name} ${d.last_name}*\n` +
-        `🪪 DNI: ${d.dni}\n` +
         `📍 ${originDisplay}\n` +
         (d.poi_name ? `🏨 ${d.poi_name}\n` : '') +
         `\n` +
@@ -762,7 +757,7 @@ export async function POST(request: NextRequest) {
           await sendButtons(from, '🏆 Santiago te Premia',
             `👋 *¡Hola! Soy el asistente de Santiago te Premia*\n\n` +
             `Para empezar a disfrutar de beneficios exclusivos en los comercios de Santiago del Estero, necesitás registrarte.\n\n` +
-            `¡Es rápido! Solo necesitamos tu nombre, DNI, fecha de nacimiento y de dónde sos.`,
+            `¡Es rápido! Solo necesitamos tu nombre, fecha de nacimiento y de dónde sos.`,
             [
               { id: 'BTN_REGISTRARME', title: '📝 Registrarme' },
             ], config.token, config.phoneId);
@@ -1229,7 +1224,7 @@ export async function POST(request: NextRequest) {
         await sendButtons(from, '🏆 Santiago te Premia',
           `👋 *¡Hola! Soy el asistente de Santiago te Premia*\n\n` +
           `Para empezar a disfrutar de beneficios exclusivos en los comercios de Santiago del Estero, necesitás registrarte.\n\n` +
-          `¡Es rápido! Solo necesitamos tu nombre, DNI, fecha de nacimiento y de dónde sos.`,
+          `¡Es rápido! Solo necesitamos tu nombre, fecha de nacimiento y de dónde sos.`,
           [
             { id: 'BTN_REGISTRARME', title: '📝 Registrarme' },
           ], config.token, config.phoneId);

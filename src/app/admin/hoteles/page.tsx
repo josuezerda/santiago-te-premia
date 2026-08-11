@@ -17,6 +17,7 @@ const typeMap: Record<string, string> = {
   'HOTEL': 'Hotel',
   'TOURIST_SPOT': 'Punto Turístico',
   'COMMERCE': 'Comercio',
+  'EVENT': 'Evento',
   'OTHER': 'Otro',
 };
 
@@ -24,6 +25,7 @@ const reverseTypeMap: Record<string, string> = {
   'Hotel': 'HOTEL',
   'Punto Turístico': 'TOURIST_SPOT',
   'Comercio': 'COMMERCE',
+  'Evento': 'EVENT',
   'Otro': 'OTHER',
 };
 
@@ -46,7 +48,7 @@ export default function HotelesPage() {
     description: '',
   });
 
-  const types = ['Todos', 'Hotel', 'Punto Turístico', 'Comercio'];
+  const types = ['Todos', 'Hotel', 'Punto Turístico', 'Comercio', 'Evento'];
 
   // Cargar puntos de interés desde Supabase
   async function loadPoints() {
@@ -100,6 +102,7 @@ export default function HotelesPage() {
     'Hotel': 'badge-accent',
     'Punto Turístico': 'badge-success',
     'Comercio': 'badge-warning',
+    'Evento': 'badge-primary',
   };
 
   const handleOpenEdit = (punto: PuntoQR) => {
@@ -256,7 +259,7 @@ export default function HotelesPage() {
                   <tr key={punto.id}>
                     <td style={{ fontWeight: 500 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {displayType === 'Hotel' ? '🏨' : displayType === 'Punto Turístico' ? '📍' : '🏪'}
+                        {displayType === 'Hotel' ? '🏨' : displayType === 'Punto Turístico' ? '📍' : displayType === 'Evento' ? '🎟️' : '🏪'}
                         {punto.name}
                       </div>
                     </td>
@@ -326,6 +329,7 @@ export default function HotelesPage() {
                     <option value="Hotel">Hotel</option>
                     <option value="Punto Turístico">Punto Turístico</option>
                     <option value="Comercio">Comercio</option>
+                    <option value="Evento">Evento (Validez 1 semana)</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -377,7 +381,7 @@ export default function HotelesPage() {
               {showQrModal.name}
             </h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
-              Los turistas pueden escanear este código para registrarse
+              Los turistas pueden escanear este código para registrarse{showQrModal.type === 'EVENT' ? ' (Válido por 1 semana)' : ''}
             </p>
 
             <div style={{
